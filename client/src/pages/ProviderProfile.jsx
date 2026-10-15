@@ -50,6 +50,9 @@ export default function ProviderProfile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [startingPriceError, setStartingPriceError] = useState('');
+  const [hourlyRateError, setHourlyRateError] = useState('');
   const [fetchError, setFetchError] = useState(false);
 
   // Initialize form state from user object
@@ -77,6 +80,9 @@ export default function ProviderProfile() {
         longitude: details.location?.longitude ?? '',
         locationAddress: details.location?.address || ''
       });
+      setPhoneError('');
+      setStartingPriceError('');
+      setHourlyRateError('');
     }
   }, [user]);
 
@@ -109,6 +115,9 @@ export default function ProviderProfile() {
           longitude: details.location?.longitude ?? '',
           locationAddress: details.location?.address || ''
         });
+        setPhoneError('');
+        setStartingPriceError('');
+        setHourlyRateError('');
       }
     } catch (err) {
       console.warn('Could not refresh provider profile:', err.message);
@@ -122,6 +131,32 @@ export default function ProviderProfile() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+
+    if (name === 'phoneNumber' && phoneError) {
+      const check = validateIndianMobile(value);
+      if (check.isValid) setPhoneError('');
+    }
+
+    if (name === 'startingPrice' && startingPriceError) {
+      if (value !== '') {
+        const num = Number(value);
+        if (!isNaN(num) && num >= 0 && Number.isFinite(num) && num <= 100000) {
+          setStartingPriceError('');
+        }
+      }
+    }
+
+    if (name === 'hourlyRate' && hourlyRateError) {
+      if (value === '') {
+        setHourlyRateError('');
+      } else {
+        const num = Number(value);
+        if (!isNaN(num) && num >= 0 && Number.isFinite(num) && num <= 100000) {
+          setHourlyRateError('');
+        }
+      }
+    }
+
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -148,6 +183,9 @@ export default function ProviderProfile() {
         bio: details.bio || ''
       });
     }
+    setPhoneError('');
+    setStartingPriceError('');
+    setHourlyRateError('');
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -181,8 +219,10 @@ export default function ProviderProfile() {
 
     const phoneValidation = validateIndianMobile(formData.phoneNumber);
     if (!phoneValidation.isValid) {
-      setErrorMessage(phoneValidation.error || 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+      setPhoneError(phoneValidation.error || 'Enter a valid 10-digit Indian mobile number.');
       return;
+    } else {
+      setPhoneError('');
     }
 
     if (!formData.category.trim()) {
@@ -195,14 +235,26 @@ export default function ProviderProfile() {
       return;
     }
 
-    if (Number(formData.startingPrice) < 0) {
-      setErrorMessage('Starting price must be a non-negative number.');
+    const startingPriceNum = Number(formData.startingPrice);
+    if (formData.startingPrice === '' || isNaN(startingPriceNum) || startingPriceNum < 0 || !Number.isFinite(startingPriceNum) || startingPriceNum > 100000) {
+      setStartingPriceError('Starting fee must be a valid non-negative number up to ₹1,00,000.');
       return;
+    } else {
+      setStartingPriceError('');
     }
 
-    if (Number(formData.hourlyRate) < 0) {
-      setErrorMessage('Hourly rate must be a non-negative number.');
-      return;
+    let hourlyRateVal = 0;
+    if (formData.hourlyRate !== '' && formData.hourlyRate !== undefined && formData.hourlyRate !== null) {
+      const hourlyRateNum = Number(formData.hourlyRate);
+      if (isNaN(hourlyRateNum) || hourlyRateNum < 0 || !Number.isFinite(hourlyRateNum) || hourlyRateNum > 100000) {
+        setHourlyRateError('Hourly rate must be a valid non-negative number up to ₹1,00,000.');
+        return;
+      } else {
+        setHourlyRateError('');
+        hourlyRateVal = Math.round(hourlyRateNum);
+      }
+    } else {
+      setHourlyRateError('');
     }
 
     // Convert comma-separated string to array
@@ -223,8 +275,8 @@ export default function ProviderProfile() {
           servicesOffered: parsedServices,
           experienceYears: Number(formData.experienceYears) || 0,
           serviceArea: formData.serviceArea.trim(),
-          startingPrice: Number(formData.startingPrice) || 0,
-          hourlyRate: Number(formData.hourlyRate) || 0,
+          startingPrice: Math.round(startingPriceNum),
+          hourlyRate: hourlyRateVal,
           isAvailable: Boolean(formData.isAvailable),
           bio: formData.bio.trim(),
           location: (formData.latitude !== '' && formData.longitude !== '')
@@ -403,17 +455,54 @@ export default function ProviderProfile() {
                     <label className="form-label" htmlFor="phoneNumber">
                       Primary Phone Number <span className="required">*</span>
                     </label>
-                    <input
-                      type="tel"
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      className="form-input"
-                      value={formData.phoneNumber}
-                      onChange={handleChange}
-                      required
-                      disabled={isSubmitting}
-                      placeholder="Phone number"
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="tel"
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        className={`form-input ${phoneError ? 'form-input-error' : ''}`}
+                        style={phoneError ? { borderColor: '#dc2626', backgroundColor: '#fef2f2' } : {}}
+                        value={formData.phoneNumber}
+                        onChange={handleChange}
+                        required
+                        disabled={isSubmitting}
+                        placeholder="e.g. 98765 43210 or +91 98765 43210"
+                        aria-invalid={Boolean(phoneError)}
+                        aria-describedby={phoneError ? 'provider-phone-error' : undefined}
+                      />
+                      {phoneError && (
+                        <AlertCircle
+                          size={16}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: '#dc2626',
+                            pointerEvents: 'none'
+                          }}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    {phoneError && (
+                      <div
+                        id="provider-phone-error"
+                        role="alert"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          color: '#dc2626',
+                          fontSize: '0.82rem',
+                          marginTop: '0.35rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                        <span>{phoneError}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -585,19 +674,58 @@ export default function ProviderProfile() {
                     <label className="form-label" htmlFor="startingPrice">
                       Starting Inspection / Visit Fee (₹) <span className="required">*</span>
                     </label>
-                    <input
-                      type="number"
-                      id="startingPrice"
-                      name="startingPrice"
-                      className="form-input"
-                      value={formData.startingPrice}
-                      onChange={handleChange}
-                      min={0}
-                      step={10}
-                      required
-                      disabled={isSubmitting}
-                    />
-                    <span className="form-helper">Base service or visiting charge.</span>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number"
+                        id="startingPrice"
+                        name="startingPrice"
+                        className={`form-input ${startingPriceError ? 'form-input-error' : ''}`}
+                        style={startingPriceError ? { borderColor: '#dc2626', backgroundColor: '#fef2f2' } : {}}
+                        value={formData.startingPrice}
+                        onChange={handleChange}
+                        min={0}
+                        max={100000}
+                        step="1"
+                        required
+                        disabled={isSubmitting}
+                        aria-invalid={Boolean(startingPriceError)}
+                        aria-describedby={startingPriceError ? 'startingPrice-error' : undefined}
+                      />
+                      {startingPriceError && (
+                        <AlertCircle
+                          size={16}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: '#dc2626',
+                            pointerEvents: 'none'
+                          }}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    {startingPriceError ? (
+                      <div
+                        id="startingPrice-error"
+                        role="alert"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          color: '#dc2626',
+                          fontSize: '0.82rem',
+                          marginTop: '0.35rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                        <span>{startingPriceError}</span>
+                      </div>
+                    ) : (
+                      <span className="form-helper">Base service or visiting charge.</span>
+                    )}
                   </div>
 
                   {/* Hourly Rate */}
@@ -605,18 +733,57 @@ export default function ProviderProfile() {
                     <label className="form-label" htmlFor="hourlyRate">
                       Hourly Labor Rate (₹)
                     </label>
-                    <input
-                      type="number"
-                      id="hourlyRate"
-                      name="hourlyRate"
-                      className="form-input"
-                      value={formData.hourlyRate}
-                      onChange={handleChange}
-                      min={0}
-                      step={25}
-                      disabled={isSubmitting}
-                    />
-                    <span className="form-helper">Approximate hourly rate for extended repairs.</span>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number"
+                        id="hourlyRate"
+                        name="hourlyRate"
+                        className={`form-input ${hourlyRateError ? 'form-input-error' : ''}`}
+                        style={hourlyRateError ? { borderColor: '#dc2626', backgroundColor: '#fef2f2' } : {}}
+                        value={formData.hourlyRate}
+                        onChange={handleChange}
+                        min={0}
+                        max={100000}
+                        step="1"
+                        disabled={isSubmitting}
+                        aria-invalid={Boolean(hourlyRateError)}
+                        aria-describedby={hourlyRateError ? 'hourlyRate-error' : undefined}
+                      />
+                      {hourlyRateError && (
+                        <AlertCircle
+                          size={16}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: '#dc2626',
+                            pointerEvents: 'none'
+                          }}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    {hourlyRateError ? (
+                      <div
+                        id="hourlyRate-error"
+                        role="alert"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          color: '#dc2626',
+                          fontSize: '0.82rem',
+                          marginTop: '0.35rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                        <span>{hourlyRateError}</span>
+                      </div>
+                    ) : (
+                      <span className="form-helper">Approximate hourly rate for extended repairs.</span>
+                    )}
                   </div>
                 </div>
 

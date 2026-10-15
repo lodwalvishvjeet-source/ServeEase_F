@@ -35,6 +35,7 @@ export default function CustomerProfile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [fetchError, setFetchError] = useState(false);
 
   // Synchronize form state from authenticated user or remote profile
@@ -45,6 +46,7 @@ export default function CustomerProfile() {
         phoneNumber: user.phoneNumber || '',
         city: user.city || 'sangli'
       });
+      setPhoneError('');
     }
   }, [user]);
 
@@ -59,6 +61,7 @@ export default function CustomerProfile() {
           phoneNumber: data.user.phoneNumber || '',
           city: data.user.city || 'sangli'
         });
+        setPhoneError('');
       }
     } catch (err) {
       console.warn('Could not refresh profile from server:', err.message);
@@ -69,6 +72,12 @@ export default function CustomerProfile() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'phoneNumber' && phoneError) {
+      const check = validateIndianMobile(value);
+      if (check.isValid) {
+        setPhoneError('');
+      }
+    }
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -81,6 +90,7 @@ export default function CustomerProfile() {
         city: user.city || 'sangli'
       });
     }
+    setPhoneError('');
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -103,8 +113,10 @@ export default function CustomerProfile() {
 
     const phoneValidation = validateIndianMobile(formData.phoneNumber);
     if (!phoneValidation.isValid) {
-      setErrorMessage(phoneValidation.error || 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+      setPhoneError(phoneValidation.error || 'Enter a valid 10-digit Indian mobile number.');
       return;
+    } else {
+      setPhoneError('');
     }
 
     try {
@@ -276,18 +288,57 @@ export default function CustomerProfile() {
               {/* Phone Number */}
               <div className="form-group">
                 <label className="form-label" htmlFor="phoneNumber">
-                  Contact Phone Number
+                  Contact Phone Number <span className="required">*</span>
                 </label>
-                <input
-                  type="tel"
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  className="form-input"
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  placeholder="Phone number"
-                  disabled={isSubmitting}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="tel"
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    className={`form-input ${phoneError ? 'form-input-error' : ''}`}
+                    style={phoneError ? { borderColor: '#dc2626', backgroundColor: '#fef2f2' } : {}}
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    placeholder="e.g. 98765 43210 or +91 98765 43210"
+                    disabled={isSubmitting}
+                    aria-invalid={Boolean(phoneError)}
+                    aria-describedby={phoneError ? 'phoneNumber-error' : undefined}
+                  />
+                  {phoneError && (
+                    <AlertCircle
+                      size={16}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#dc2626',
+                        pointerEvents: 'none'
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+                {phoneError ? (
+                  <div
+                    id="phoneNumber-error"
+                    role="alert"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      color: '#dc2626',
+                      fontSize: '0.82rem',
+                      marginTop: '0.35rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                    <span>{phoneError}</span>
+                  </div>
+                ) : (
+                  <span className="form-helper">Used by service providers to coordinate appointment arrival.</span>
+                )}
               </div>
 
               {/* City Selection */}

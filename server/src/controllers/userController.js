@@ -126,25 +126,37 @@ export const updateMyProfile = async (req, res, next) => {
       }
 
       if (details.startingPrice !== undefined) {
-        const price = Number(details.startingPrice);
-        if (isNaN(price) || price < 0) {
+        if (details.startingPrice === null || typeof details.startingPrice === 'boolean') {
           return res.status(400).json({
             success: false,
             error: 'Starting price must be a non-negative number.'
           });
         }
-        user.providerDetails.startingPrice = price;
+        const price = Number(details.startingPrice);
+        if (isNaN(price) || price < 0 || !Number.isFinite(price) || price > 100000) {
+          return res.status(400).json({
+            success: false,
+            error: 'Starting price must be a non-negative number.'
+          });
+        }
+        user.providerDetails.startingPrice = Math.round(price);
       }
 
       if (details.hourlyRate !== undefined) {
-        const rate = Number(details.hourlyRate);
-        if (isNaN(rate) || rate < 0) {
+        if (details.hourlyRate === null || typeof details.hourlyRate === 'boolean') {
           return res.status(400).json({
             success: false,
             error: 'Hourly rate must be a non-negative number.'
           });
         }
-        user.providerDetails.hourlyRate = rate;
+        const rate = Number(details.hourlyRate);
+        if (isNaN(rate) || rate < 0 || !Number.isFinite(rate) || rate > 100000) {
+          return res.status(400).json({
+            success: false,
+            error: 'Hourly rate must be a non-negative number.'
+          });
+        }
+        user.providerDetails.hourlyRate = Math.round(rate);
       }
 
       if (details.isAvailable !== undefined) {

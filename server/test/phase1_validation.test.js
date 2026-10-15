@@ -45,33 +45,45 @@ test('validateEmail utility handles valid and invalid syntax', () => {
 
 // Unit tests for validateIndianMobile
 test('validateIndianMobile utility validates 10 digits starting with 6-9 and normalizes', () => {
-  // 10 digits starting with 9, 8, 7, 6
+  // Valid phone numbers
   assert.equal(validateIndianMobile('9876543210').isValid, true);
   assert.equal(validateIndianMobile('9876543210').normalized, '+91 9876543210');
+
+  assert.equal(validateIndianMobile('98765 43210').isValid, true);
+  assert.equal(validateIndianMobile('98765 43210').normalized, '+91 9876543210');
+
+  assert.equal(validateIndianMobile('+91 98765 43210').isValid, true);
+  assert.equal(validateIndianMobile('+91 98765 43210').normalized, '+91 9876543210');
 
   assert.equal(validateIndianMobile('8765432109').isValid, true);
   assert.equal(validateIndianMobile('7654321098').isValid, true);
   assert.equal(validateIndianMobile('6543210987').isValid, true);
 
-  // With +91 and spaces
-  assert.equal(validateIndianMobile('+91 98765 43210').isValid, true);
-  assert.equal(validateIndianMobile('+91 98765 43210').normalized, '+91 9876543210');
-
   // With 0 prefix
   assert.equal(validateIndianMobile('09876543210').isValid, true);
   assert.equal(validateIndianMobile('09876543210').normalized, '+91 9876543210');
 
-  // Invalid: starts with 1-5
+  // Invalid: starts with 1-5 (invalid starting digit)
   assert.equal(validateIndianMobile('5876543210').isValid, false);
   assert.equal(validateIndianMobile('1234567890').isValid, false);
 
-  // Invalid: length != 10
-  assert.equal(validateIndianMobile('98765').isValid, false);
-  assert.equal(validateIndianMobile('987654321000').isValid, false);
+  // Invalid: 9 digits
+  assert.equal(validateIndianMobile('987654321').isValid, false);
 
-  // Invalid: non-numeric characters
+  // Invalid: 11 digits
+  assert.equal(validateIndianMobile('98765432101').isValid, false);
+
+  // Invalid: alphabetic or malformed input
   assert.equal(validateIndianMobile('98765abcde').isValid, false);
+  assert.equal(validateIndianMobile('phone-number').isValid, false);
+  assert.equal(validateIndianMobile('+91-98765-invalid').isValid, false);
+  assert.equal(validateIndianMobile('98765@43210').isValid, false);
   assert.equal(validateIndianMobile('').isValid, false);
+
+  // Invalid: repeated country prefix
+  assert.equal(validateIndianMobile('+91 +91 98765 43210').isValid, false);
+  assert.equal(validateIndianMobile('+91919876543210').isValid, false);
+  assert.equal(validateIndianMobile('+91+919876543210').isValid, false);
 });
 
 // Integration: Registration validation

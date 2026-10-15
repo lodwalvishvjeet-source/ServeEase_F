@@ -63,7 +63,27 @@ export const validateIndianMobile = (phone) => {
     return { isValid: false, normalized: '', core10: '', error: 'Phone number cannot be empty.' };
   }
 
-  // Remove formatting characters (spaces, dashes, parentheses)
+  // Reject any string containing characters other than digits, spaces, hyphens, parentheses, and leading plus
+  if (!/^\+?[0-9\s\-()]+$/.test(trimmed)) {
+    return {
+      isValid: false,
+      normalized: trimmed,
+      core10: '',
+      error: 'Please provide a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g., +91 98765 43210 or 9876543210).'
+    };
+  }
+
+  // Reject misplaced or multiple '+' signs
+  if (trimmed.indexOf('+') > 0 || (trimmed.match(/\+/g) || []).length > 1) {
+    return {
+      isValid: false,
+      normalized: trimmed,
+      core10: '',
+      error: 'Please provide a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g., +91 98765 43210 or 9876543210).'
+    };
+  }
+
+  // Remove permitted formatting characters (spaces, dashes, parentheses)
   const clean = trimmed.replace(/[\s\-()]/g, '');
 
   // Must match either 10 digits starting with 6-9, or prefixed with +91, 91, or 0

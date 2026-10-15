@@ -605,8 +605,14 @@ export const updateMyService = async (req, res, next) => {
 
     // Permitted service setting updates
     if (startingPrice !== undefined) {
+      if (startingPrice === null || typeof startingPrice === 'boolean') {
+        return res.status(400).json({
+          success: false,
+          error: 'Starting price must be a non-negative number.'
+        });
+      }
       const num = Number(startingPrice);
-      if (isNaN(num) || num < 0) {
+      if (isNaN(num) || num < 0 || !Number.isFinite(num) || num > 100000) {
         return res.status(400).json({
           success: false,
           error: 'Starting price must be a non-negative number.'
@@ -616,8 +622,14 @@ export const updateMyService = async (req, res, next) => {
     }
 
     if (hourlyRate !== undefined) {
+      if (hourlyRate === null || typeof hourlyRate === 'boolean') {
+        return res.status(400).json({
+          success: false,
+          error: 'Hourly rate must be a non-negative number.'
+        });
+      }
       const num = Number(hourlyRate);
-      if (isNaN(num) || num < 0) {
+      if (isNaN(num) || num < 0 || !Number.isFinite(num) || num > 100000) {
         return res.status(400).json({
           success: false,
           error: 'Hourly rate must be a non-negative number.'

@@ -46,16 +46,43 @@ export const validateEmail = (email) => {
  * @returns {{ isValid: boolean, normalized: string, core10: string, error?: string }}
  */
 export const validateIndianMobile = (phone) => {
-  if (!phone || typeof phone !== 'string') {
-    return { isValid: false, normalized: '', core10: '', error: 'Phone number is required.' };
+  if (phone === undefined || phone === null) {
+    return { isValid: false, normalized: '', core10: '', error: 'Enter a valid 10-digit Indian mobile number.' };
+  }
+
+  if (typeof phone !== 'string') {
+    return { isValid: false, normalized: '', core10: '', error: 'Enter a valid 10-digit Indian mobile number.' };
   }
 
   const trimmed = phone.trim();
   if (!trimmed) {
-    return { isValid: false, normalized: '', core10: '', error: 'Phone number cannot be empty.' };
+    return { isValid: false, normalized: '', core10: '', error: 'Enter a valid 10-digit Indian mobile number.' };
   }
 
+  // Reject any string containing characters other than digits, spaces, hyphens, parentheses, and leading plus
+  if (!/^\+?[0-9\s\-()]+$/.test(trimmed)) {
+    return {
+      isValid: false,
+      normalized: trimmed,
+      core10: '',
+      error: 'Enter a valid 10-digit Indian mobile number.'
+    };
+  }
+
+  // Reject misplaced or multiple '+' signs
+  if (trimmed.indexOf('+') > 0 || (trimmed.match(/\+/g) || []).length > 1) {
+    return {
+      isValid: false,
+      normalized: trimmed,
+      core10: '',
+      error: 'Enter a valid 10-digit Indian mobile number.'
+    };
+  }
+
+  // Remove permitted formatting characters (spaces, dashes, parentheses)
   const clean = trimmed.replace(/[\s\-()]/g, '');
+
+  // Must match either 10 digits starting with 6-9, or prefixed with +91, 91, or 0
   const match = clean.match(/^(?:\+?91|0)?([6-9]\d{9})$/);
 
   if (!match) {
@@ -63,7 +90,7 @@ export const validateIndianMobile = (phone) => {
       isValid: false,
       normalized: trimmed,
       core10: '',
-      error: 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g. 98765 43210 or +91 98765 43210).'
+      error: 'Enter a valid 10-digit Indian mobile number.'
     };
   }
 

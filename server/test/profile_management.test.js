@@ -367,6 +367,74 @@ test('Profile update rejects negative rates and experience years', async () => {
   assert.ok(res3.body.error.includes('Experience years must be a non-negative number'));
 });
 
+test('Provider pricing regression: accepts valid integer prices like 799, rejects invalid/out-of-bounds, and preserves unrelated fields', async () => {
+  const { token } = await registerUser({
+    name: 'Anil Electrician',
+    email: 'anil.pricing.test@example.com',
+    password: 'Password123',
+    city: 'pune',
+    role: 'provider',
+    serviceArea: 'Kothrud',
+    servicesOffered: 'Wiring',
+    providerDetails: {
+      category: 'Electrical Repairs',
+      title: 'Senior Electrician',
+      bio: 'Reliable electrical repairs',
+      serviceArea: 'Kothrud'
+    }
+  });
+
+  // 1. Accept valid integer price 799
+  const validRes = await request(app)
+    .patch('/api/users/profile')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      providerDetails: {
+        startingPrice: 799,
+        hourlyRate: 499
+      }
+    });
+
+  assert.equal(validRes.status, 200);
+  assert.equal(validRes.body.success, true);
+  assert.equal(validRes.body.user.providerDetails.startingPrice, 799);
+  assert.equal(validRes.body.user.providerDetails.hourlyRate, 499);
+  // Ensure unrelated provider fields are preserved
+  assert.equal(validRes.body.user.providerDetails.category, 'Electrical Repairs');
+  assert.equal(validRes.body.user.providerDetails.title, 'Senior Electrician');
+  assert.equal(validRes.body.user.providerDetails.bio, 'Reliable electrical repairs');
+
+  // Verify persistence in MongoDB
+  const inDb = await User.findOne({ email: 'anil.pricing.test@example.com' });
+  assert.equal(inDb.providerDetails.startingPrice, 799);
+  assert.equal(inDb.providerDetails.hourlyRate, 499);
+  assert.equal(inDb.providerDetails.title, 'Senior Electrician');
+
+  // 2. Reject values above business limits (> 100,000)
+  const tooHighRes = await request(app)
+    .patch('/api/users/profile')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ providerDetails: { startingPrice: 150000 } });
+  assert.equal(tooHighRes.status, 400);
+  assert.ok(tooHighRes.body.error.includes('Starting price must be a non-negative number'));
+
+  // 3. Reject malformed string
+  const malformedRes = await request(app)
+    .patch('/api/users/profile')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ providerDetails: { startingPrice: 'not-a-number' } });
+  assert.equal(malformedRes.status, 400);
+  assert.ok(malformedRes.body.error.includes('Starting price must be a non-negative number'));
+
+  // 4. Reject non-finite number (Infinity)
+  const infiniteRes = await request(app)
+    .patch('/api/users/profile')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ providerDetails: { startingPrice: Infinity } });
+  assert.equal(infiniteRes.status, 400);
+  assert.ok(infiniteRes.body.error.includes('Starting price must be a non-negative number'));
+});
+
 // =========================================================================
 // 4. PROVIDER MY SERVICES MANAGEMENT (/api/providers/my-services)
 // =========================================================================
