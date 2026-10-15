@@ -1,0 +1,905 @@
+import mongoose from 'mongoose';
+import User from '../models/User.js';
+import Booking from '../models/Booking.js';
+import Review from '../models/Review.js';
+import Notification from '../models/Notification.js';
+import AuditLog from '../models/AuditLog.js';
+import { recalculateProviderRating } from './reviewController.js';
+import { getCityDisplayName, normalizeCity } from '../config/cities.js';
+
+// Safe customer / provider projection for admin views
+const USER_SAFE_FIELDS = 'name email role city phoneNumber status providerDetails createdAt updatedAt';
+
+/**
+ * Helper to compute platform analytics and distributions directly from MongoDB
+ */
+export const computePlatformAnalytics = async ({ timeframe = '30d', city, category } = {}) => {
+  // 1. Calculate timeframe filter
+  let startDate = null;
+  const now = new Date();
+  if (timeframe === '7d') {
+    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (timeframe === '30d') {
+    startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  } else if (timeframe === '90d') {
+    startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  }
+
+  // Base booking match for trends
+  const trendMatch = {};
+  if (startDate) trendMatch.createdAt = { $gte: startDate };
+  if (city && city !== 'all') {
+    const canonicalCity = normalizeCity(city);
+    if (canonicalCity) trendMatch.city = canonicalCity;
+  }
+  if (category && category !== 'all') {
+    trendMatch.category = new RegExp(category, 'i');
+  }
+
+  const [
+    totalUsers,
+    totalCustomers,
+    activeCustomers,
+    suspendedCustomers,
+    totalProviders,
+    verifiedProviders,
+    pendingVerifications,
+    activeProviders,
+    suspendedProviders,
+    totalAdmins,
+    totalBookings,
+    bookingStatusAgg,
+    revenueAgg,
+    popularCategoriesBookings,
+    popularCategoriesProviders,
+    cityUsersAgg,
+    cityBookingsAgg,
+    bookingTrendsAgg,
+    totalReviews,
+    hiddenReviews,
+    pendingReportedReviews,
+    recentAuditLogs
+  ] = await Promise.all([
+    User.countDocuments({}),
+    User.countDocuments({ role: 'customer' }),
+    User.countDocuments({ role: 'customer', status: 'active' }),
+    User.countDocuments({ role: 'customer', status: 'suspended' }),
+    User.countDocuments({ role: 'provider' }),
+    User.countDocuments({ role: 'provider', 'providerDetails.isVerified': true }),
+    User.countDocuments({ role: 'provider', 'providerDetails.isVerified': false }),
+    User.countDocuments({ role: 'provider', status: 'active' }),
+    User.countDocuments({ role: 'provider', status: 'suspended' }),
+    User.countDocuments({ role: 'admin' }),
+    Booking.countDocuments({}),
+    Booking.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } }
+    ]),
+    Booking.aggregate([
+      { $match: { status: { $in: ['completed', 'accepted'] } } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]),
+    Booking.aggregate([
+      { $match: { category: { $exists: true, $ne: '' } } },
+      { $group: {
+        _id: '$category',
+        bookingsCount: { $sum: 1 },
+        totalRevenue: { $sum: '$totalAmount' },
+        completedCount: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
+      } },
+      { $sort: { bookingsCount: -1 } },
+      { $limit: 8 }
+    ]),
+    User.aggregate([
+      { $match: { role: 'provider', 'providerDetails.category': { $exists: true, $ne: '' } } },
+      { $group: {
+        _id: '$providerDetails.category',
+        providerCount: { $sum: 1 },
+        verifiedCount: { $sum: { $cond: [{ $eq: ['$providerDetails.isVerified', true] }, 1, 0] } }
+      } },
+      { $sort: { providerCount: -1 } },
+      { $limit: 8 }
+    ]),
+    User.aggregate([
+      { $match: { city: { $exists: true, $ne: '' } } },
+      { $group: {
+        _id: '$city',
+        totalUsers: { $sum: 1 },
+        customers: { $sum: { $cond: [{ $eq: ['$role', 'customer'] }, 1, 0] } },
+        providers: { $sum: { $cond: [{ $eq: ['$role', 'provider'] }, 1, 0] } },
+        verifiedProviders: { $sum: { $cond: [{ $and: [{ $eq: ['$role', 'provider'] }, { $eq: ['$providerDetails.isVerified', true] }] }, 1, 0] } }
+      } },
+      { $sort: { totalUsers: -1 } }
+    ]),
+    Booking.aggregate([
+      { $match: { city: { $exists: true, $ne: '' } } },
+      { $group: {
+        _id: '$city',
+        totalBookings: { $sum: 1 },
+        completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        revenue: { $sum: '$totalAmount' }
+      } },
+      { $sort: { totalBookings: -1 } }
+    ]),
+    Booking.aggregate([
+      ...(Object.keys(trendMatch).length > 0 ? [{ $match: trendMatch }] : []),
+      { $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        accepted: { $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] } },
+        pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+        revenue: { $sum: '$totalAmount' }
+      } },
+      { $sort: { _id: 1 } }
+    ]),
+    Review.countDocuments({}),
+    Review.countDocuments({ status: 'hidden' }),
+    Review.countDocuments({ 'reports.status': 'pending' }),
+    AuditLog.find({}).sort({ createdAt: -1 }).limit(10).lean()
+  ]);
+
+  // Format bookings by status map
+  const bookingsByStatus = {
+    pending: 0,
+    accepted: 0,
+    completed: 0,
+    cancelled: 0,
+    rejected: 0
+  };
+  bookingStatusAgg.forEach(item => {
+    if (item._id && bookingsByStatus[item._id] !== undefined) {
+      bookingsByStatus[item._id] = item.count;
+    }
+  });
+
+  const totalRevenue = revenueAgg[0]?.total || 0;
+
+  // Format City Distribution Map combining Users & Bookings
+  const bookingCityMap = new Map();
+  cityBookingsAgg.forEach(b => {
+    bookingCityMap.set(b._id, {
+      totalBookings: b.totalBookings,
+      completedBookings: b.completedBookings,
+      revenue: b.revenue
+    });
+  });
+
+  const cityDistribution = cityUsersAgg.map(u => {
+    const bStats = bookingCityMap.get(u._id) || { totalBookings: 0, completedBookings: 0, revenue: 0 };
+    return {
+      city: u._id,
+      cityName: getCityDisplayName(u._id),
+      totalUsers: u.totalUsers,
+      customers: u.customers,
+      providers: u.providers,
+      verifiedProviders: u.verifiedProviders,
+      totalBookings: bStats.totalBookings,
+      completedBookings: bStats.completedBookings,
+      revenue: bStats.revenue
+    };
+  });
+
+  // Calculate completion percentage
+  const finalizedCount = bookingsByStatus.completed + bookingsByStatus.cancelled + bookingsByStatus.rejected;
+  const completionRate = finalizedCount > 0 ? Math.round((bookingsByStatus.completed / finalizedCount) * 100) : 0;
+
+  return {
+    users: {
+      totalCustomers,
+      activeCustomers,
+      suspendedCustomers,
+      totalProviders,
+      verifiedProviders,
+      pendingVerifications,
+      activeProviders,
+      suspendedProviders,
+      totalAdmins,
+      totalUsers,
+      activeUsers: activeCustomers + activeProviders,
+      suspendedUsers: suspendedCustomers + suspendedProviders
+    },
+    providers: {
+      total: totalProviders,
+      verified: verifiedProviders,
+      pendingVerification: pendingVerifications,
+      suspended: suspendedProviders,
+      active: activeProviders
+    },
+    bookings: {
+      total: totalBookings,
+      byStatus: bookingsByStatus,
+      totalRevenue,
+      completionRate
+    },
+    reviews: {
+      total: totalReviews,
+      visible: Math.max(0, totalReviews - hiddenReviews),
+      hidden: hiddenReviews,
+      pendingReports: pendingReportedReviews
+    },
+    categories: {
+      byBookings: popularCategoriesBookings.map(c => ({
+        category: c._id,
+        count: c.bookingsCount,
+        revenue: c.totalRevenue,
+        completed: c.completedCount
+      })),
+      byProviders: popularCategoriesProviders.map(c => ({
+        category: c._id,
+        count: c.providerCount,
+        verified: c.verifiedCount
+      }))
+    },
+    cityDistribution,
+    bookingTrends: bookingTrendsAgg.map(t => ({
+      date: t._id,
+      total: t.total,
+      completed: t.completed,
+      accepted: t.accepted,
+      pending: t.pending,
+      cancelled: t.cancelled,
+      revenue: t.revenue
+    })),
+    recentAuditLogs
+  };
+};
+
+/**
+ * GET /api/admin/stats
+ * Platform overview statistics computed directly from persisted database records
+ */
+export const getAdminStats = async (req, res, next) => {
+  try {
+    const analytics = await computePlatformAnalytics({ timeframe: '30d' });
+    return res.status(200).json({
+      success: true,
+      stats: analytics
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/analytics
+ * Advanced database-driven analytics with timeframe and filtering options
+ */
+export const getAdminAnalytics = async (req, res, next) => {
+  try {
+    const { timeframe = '30d', city, category } = req.query;
+
+    const validTimeframes = ['7d', '30d', '90d', 'all'];
+    const activeTimeframe = validTimeframes.includes(timeframe) ? timeframe : '30d';
+
+    const analytics = await computePlatformAnalytics({
+      timeframe: activeTimeframe,
+      city,
+      category
+    });
+
+    return res.status(200).json({
+      success: true,
+      timeframe: activeTimeframe,
+      analytics
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/users
+ * Searchable, filterable, and paginated user management table
+ */
+export const getUsers = async (req, res, next) => {
+  try {
+    const { q, role, status, city, page = 1, limit = 20 } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+
+    if (role && role !== 'all') {
+      filter.role = role;
+    }
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (city && city !== 'all') {
+      const canonical = normalizeCity(city);
+      if (canonical) filter.city = canonical;
+    }
+
+    if (q && q.trim()) {
+      const regex = new RegExp(q.trim(), 'i');
+      filter.$or = [
+        { name: regex },
+        { email: regex },
+        { phoneNumber: regex },
+        { 'providerDetails.title': regex }
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .select(USER_SAFE_FIELDS)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(filter)
+    ]);
+
+    const safeUsers = users.map(u => ({
+      ...u,
+      cityName: getCityDisplayName(u.city)
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: safeUsers.length,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
+      users: safeUsers
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/users/:id
+ * Retrieve detailed user profile along with operational audit history
+ */
+export const getUserById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid user identifier.' });
+    }
+
+    const user = await User.findById(id).select(USER_SAFE_FIELDS);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    // Retrieve contextual operational counts
+    let bookingCount = 0;
+    let reviewCount = 0;
+
+    if (user.role === 'customer') {
+      [bookingCount, reviewCount] = await Promise.all([
+        Booking.countDocuments({ customer: user._id }),
+        Review.countDocuments({ customer: user._id })
+      ]);
+    } else if (user.role === 'provider') {
+      [bookingCount, reviewCount] = await Promise.all([
+        Booking.countDocuments({ provider: user._id }),
+        Review.countDocuments({ provider: user._id })
+      ]);
+    }
+
+    const auditHistory = await AuditLog.find({ targetId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        ...user.toObject(),
+        cityName: getCityDisplayName(user.city),
+        stats: {
+          bookingCount,
+          reviewCount
+        },
+        auditHistory
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * PATCH /api/admin/users/:id/status
+ * Suspend or reactivate user account with audit logging
+ */
+export const updateUserStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid user identifier.' });
+    }
+
+    if (!['active', 'suspended'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Status must be either "active" or "suspended".'
+      });
+    }
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    // 1. Prevent admin from suspending their own account
+    if (req.user._id.toString() === targetUser._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Administrators cannot suspend or deactivate their own account.'
+      });
+    }
+
+    // 2. Prevent removal/suspension of the last active administrator
+    if (targetUser.role === 'admin' && status === 'suspended') {
+      const activeAdminCount = await User.countDocuments({ role: 'admin', status: 'active' });
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot suspend the platform’s last remaining active administrator account.'
+        });
+      }
+    }
+
+    const previousStatus = targetUser.status;
+    targetUser.status = status;
+    await targetUser.save();
+
+    // 3. Record persistent audit log
+    const auditAction = status === 'suspended' ? 'user_suspended' : 'user_reactivated';
+    const auditEntry = await AuditLog.create({
+      admin: req.user._id,
+      adminName: req.user.name,
+      adminEmail: req.user.email,
+      action: auditAction,
+      targetId: targetUser._id,
+      targetType: 'User',
+      reason: (reason || '').trim(),
+      details: {
+        userName: targetUser.name,
+        userEmail: targetUser.email,
+        userRole: targetUser.role,
+        previousStatus,
+        newStatus: status
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Account for ${targetUser.name} has been ${status === 'suspended' ? 'suspended' : 'reactivated'}.`,
+      user: targetUser.toSafeObject(),
+      audit: auditEntry
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/providers
+ * Provider verification queue and catalog oversight
+ */
+export const getAdminProviders = async (req, res, next) => {
+  try {
+    const { verification = 'all', city, category, q, page = 1, limit = 20 } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = { role: 'provider' };
+
+    if (verification === 'pending') {
+      filter['providerDetails.isVerified'] = false;
+    } else if (verification === 'verified') {
+      filter['providerDetails.isVerified'] = true;
+    }
+
+    if (city && city !== 'all') {
+      const canonical = normalizeCity(city);
+      if (canonical) filter.city = canonical;
+    }
+
+    if (category && category !== 'all') {
+      filter['providerDetails.category'] = new RegExp(category, 'i');
+    }
+
+    if (q && q.trim()) {
+      const regex = new RegExp(q.trim(), 'i');
+      filter.$or = [
+        { name: regex },
+        { email: regex },
+        { 'providerDetails.title': regex },
+        { 'providerDetails.category': regex }
+      ];
+    }
+
+    const [providers, total] = await Promise.all([
+      User.find(filter)
+        .select(USER_SAFE_FIELDS)
+        .sort({ 'providerDetails.isVerified': 1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(filter)
+    ]);
+
+    const formatted = providers.map(p => ({
+      ...p,
+      cityName: getCityDisplayName(p.city)
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: formatted.length,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
+      providers: formatted
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * PATCH /api/admin/providers/:id/verify
+ * Approve or reject a provider's trade verification with audit logging
+ */
+export const verifyProvider = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { isVerified, notes } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid provider identifier.' });
+    }
+
+    if (isVerified === undefined || typeof isVerified !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification decision (isVerified: boolean) is required.'
+      });
+    }
+
+    const provider = await User.findOne({ _id: id, role: 'provider' });
+    if (!provider) {
+      return res.status(404).json({ success: false, error: 'Service provider not found.' });
+    }
+
+    // Ensure providerDetails subdocument exists
+    if (!provider.providerDetails) {
+      provider.providerDetails = {};
+    }
+
+    const previousVerified = Boolean(provider.providerDetails.isVerified);
+    provider.providerDetails.isVerified = isVerified;
+    provider.providerDetails.verifiedAt = new Date();
+    provider.providerDetails.verifiedBy = req.user._id;
+    provider.providerDetails.verificationNotes = (notes || '').trim();
+
+    await provider.save();
+
+    // Record persistent audit log
+    const auditAction = isVerified ? 'provider_verified' : 'provider_rejected';
+    const auditEntry = await AuditLog.create({
+      admin: req.user._id,
+      adminName: req.user.name,
+      adminEmail: req.user.email,
+      action: auditAction,
+      targetId: provider._id,
+      targetType: 'Provider',
+      reason: (notes || '').trim(),
+      details: {
+        providerName: provider.name,
+        providerEmail: provider.email,
+        category: provider.providerDetails.category,
+        previousVerified,
+        newVerified: isVerified
+      }
+    });
+
+    // Notify provider of verification outcome
+    try {
+      await Notification.create({
+        recipient: provider._id,
+        type: 'system',
+        title: isVerified ? 'Verification Badge Approved' : 'Verification Update',
+        message: isVerified
+          ? 'Your service provider credentials have been approved by administration. The verified badge is now visible on your public profile.'
+          : `Your verification request was reviewed: ${notes ? notes.trim() : 'Please contact administrator for more details.'}`
+      });
+    } catch (notifErr) {
+      console.warn('Could not persist verification notification:', notifErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Provider ${provider.name} has been ${isVerified ? 'verified' : 'marked unverified'}.`,
+      provider: provider.toSafeObject(),
+      audit: auditEntry
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/bookings
+ * Read-only booking oversight with status, city, date filters and masked customer address
+ */
+export const getAdminBookings = async (req, res, next) => {
+  try {
+    const { status, city, date, customerId, providerId, page = 1, limit = 20 } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (city && city !== 'all') {
+      const canonical = normalizeCity(city);
+      if (canonical) filter.city = canonical;
+    }
+
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      filter.bookingDate = date;
+    }
+
+    if (customerId && mongoose.Types.ObjectId.isValid(customerId)) {
+      filter.customer = customerId;
+    }
+
+    if (providerId && mongoose.Types.ObjectId.isValid(providerId)) {
+      filter.provider = providerId;
+    }
+
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter)
+        .populate('customer', 'name email city phoneNumber')
+        .populate('provider', 'name email city phoneNumber providerDetails.title providerDetails.category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Booking.countDocuments(filter)
+    ]);
+
+    // Format safe response with city display names and masked private delivery addresses
+    const formatted = bookings.map(b => {
+      let displayAddress = b.serviceAddress || '';
+      if (displayAddress.length > 20) {
+        const parts = displayAddress.split(',');
+        if (parts.length > 1) {
+          displayAddress = `[House/Street masked] • ${parts.slice(1).join(',').trim()}`;
+        } else {
+          displayAddress = `[Street details masked] • ${displayAddress.slice(-10)}`;
+        }
+      } else if (displayAddress.length > 0) {
+        displayAddress = '[Masked for customer privacy]';
+      }
+
+      const safeBooking = { ...b };
+      delete safeBooking.serviceAddress; // Never leak raw unmasked private address
+      safeBooking.serviceAddressMasked = displayAddress;
+      safeBooking.cityName = getCityDisplayName(b.city);
+
+      return safeBooking;
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: formatted.length,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
+      bookings: formatted
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/reviews
+ * Reviews and reported feedback moderation queue
+ */
+export const getAdminReviews = async (req, res, next) => {
+  try {
+    const { status = 'all', reported = 'all', providerId, page = 1, limit = 20 } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (reported === 'has_reports') {
+      filter['reports.0'] = { $exists: true };
+    } else if (reported === 'pending_reports') {
+      filter['reports.status'] = 'pending';
+    }
+
+    if (providerId && mongoose.Types.ObjectId.isValid(providerId)) {
+      filter.provider = providerId;
+    }
+
+    const [reviews, total] = await Promise.all([
+      Review.find(filter)
+        .populate('customer', 'name email city')
+        .populate('provider', 'name email city providerDetails.title')
+        .populate('reports.reporter', 'name email role')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Review.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      count: reviews.length,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
+      reviews
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * PATCH /api/admin/reviews/:id/moderate
+ * Moderate review visibility (hide/restore) and resolve reports
+ */
+export const moderateReview = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, reason, dismissReports = true } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid review identifier.' });
+    }
+
+    if (!['visible', 'hidden'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Status must be either "visible" or "hidden".'
+      });
+    }
+
+    const review = await Review.findById(id);
+    if (!review) {
+      return res.status(404).json({ success: false, error: 'Review not found.' });
+    }
+
+    const previousStatus = review.status;
+    review.status = status;
+
+    if (status === 'hidden') {
+      review.hiddenReason = (reason || '').trim();
+      review.hiddenAt = new Date();
+      review.hiddenBy = req.user._id;
+    } else {
+      review.hiddenReason = '';
+      review.hiddenAt = null;
+      review.hiddenBy = null;
+    }
+
+    // Resolve or dismiss pending reports if requested
+    if (dismissReports && Array.isArray(review.reports)) {
+      review.reports.forEach(r => {
+        if (r.status === 'pending') {
+          r.status = status === 'hidden' ? 'resolved' : 'dismissed';
+          r.resolvedAt = new Date();
+          r.resolvedBy = req.user._id;
+          r.resolutionNote = `Resolved by administrator: review set to ${status}.`;
+        }
+      });
+    }
+
+    await review.save();
+
+    // Recalculate provider aggregate rating excluding hidden reviews
+    const { averageRating, reviewCount } = await recalculateProviderRating(review.provider);
+
+    // Record persistent audit log
+    const auditAction = status === 'hidden' ? 'review_hidden' : 'review_restored';
+    const auditEntry = await AuditLog.create({
+      admin: req.user._id,
+      adminName: req.user.name,
+      adminEmail: req.user.email,
+      action: auditAction,
+      targetId: review._id,
+      targetType: 'Review',
+      reason: (reason || '').trim(),
+      details: {
+        providerId: review.provider,
+        customerId: review.customer,
+        rating: review.rating,
+        previousStatus,
+        newStatus: status,
+        updatedAverageRating: averageRating,
+        updatedReviewCount: reviewCount
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Review has been marked as ${status}. Provider rating updated.`,
+      review,
+      providerStats: {
+        averageRating,
+        reviewCount
+      },
+      audit: auditEntry
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/admin/audit-logs
+ * Read-only persistent administrative audit log trail
+ */
+export const getAdminAuditLogs = async (req, res, next) => {
+  try {
+    const { action, targetType, page = 1, limit = 25 } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+
+    if (action && action !== 'all') {
+      filter.action = action;
+    }
+
+    if (targetType && targetType !== 'all') {
+      filter.targetType = targetType;
+    }
+
+    const [logs, total] = await Promise.all([
+      AuditLog.find(filter)
+        .populate('admin', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      AuditLog.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      count: logs.length,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
+      logs
+    });
+  } catch (error) {
+    return next(error);
+  }
+};

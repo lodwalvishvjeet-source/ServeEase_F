@@ -1,0 +1,2381 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  ShieldCheck, 
+  Users, 
+  UserCheck, 
+  Calendar, 
+  Star, 
+  LogOut, 
+  AlertCircle, 
+  CheckCircle2, 
+  RefreshCw,
+  Search,
+  Filter,
+  Eye,
+  Ban,
+  RotateCcw,
+  Flag,
+  FileText,
+  Clock,
+  MapPin,
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert,
+  Sliders,
+  Check,
+  X,
+  TrendingUp,
+  BarChart3,
+  PieChart,
+  IndianRupee,
+  Activity,
+  Award,
+  ArrowUpRight,
+  Layers
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import Button from '../components/common/Button';
+import DashboardLayout from '../components/layout/DashboardLayout';
+import { adminApi, systemApi } from '../services/api';
+import { getCityDisplayName, CITIES } from '../data/cities';
+import { getSocket } from '../services/socket';
+
+export default function AdminDashboard() {
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'users' | 'providers' | 'bookings' | 'reviews' | 'audit'
+
+  // ========================================================
+  // 1. OVERVIEW & HEALTH STATE (System Analytics)
+  // ========================================================
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(null);
+  const [healthData, setHealthData] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [analyticsTimeframe, setAnalyticsTimeframe] = useState('30d');
+  const [analyticsCity, setAnalyticsCity] = useState('all');
+  const [hoveredTrendPoint, setHoveredTrendPoint] = useState(null);
+
+  const fetchStatsAndHealth = useCallback(async (timeframe = analyticsTimeframe, city = analyticsCity) => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const [analyticsRes, healthRes] = await Promise.all([
+        adminApi.getAnalytics({
+          timeframe,
+          city: city === 'all' ? undefined : city
+        }),
+        systemApi.getHealth().catch(() => null)
+      ]);
+      if (analyticsRes.success) {
+        setStats(analyticsRes.analytics || analyticsRes.stats);
+      } else {
+        // Fallback to getStats
+        const statsRes = await adminApi.getStats();
+        if (statsRes.success) {
+          setStats(statsRes.stats);
+        } else {
+          setStatsError(statsRes.error || 'Failed to load platform statistics.');
+        }
+      }
+      if (healthRes) {
+        setHealthData(healthRes);
+      }
+    } catch (err) {
+      setStatsError(err.message || 'Error fetching administrator metrics.');
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [analyticsTimeframe, analyticsCity]);
+
+  useEffect(() => {
+    fetchStatsAndHealth(analyticsTimeframe, analyticsCity);
+  }, [analyticsTimeframe, analyticsCity, fetchStatsAndHealth]);
+
+  // ========================================================
+  // 2. USERS MANAGEMENT STATE
+  // ========================================================
+  const [users, setUsers] = useState([]);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [userCityFilter, setUserCityFilter] = useState('all');
+
+  // User Action Modals
+  const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [actionTargetUser, setActionTargetUser] = useState(null);
+  const [actionStatusType, setActionStatusType] = useState('suspended'); // 'active' | 'suspended'
+  const [actionReason, setActionReason] = useState('');
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [actionMessage, setActionMessage] = useState(null);
+
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const res = await adminApi.getUsers({
+        q: userSearch,
+        role: userRoleFilter,
+        status: userStatusFilter,
+        city: userCityFilter === 'all' ? undefined : userCityFilter,
+        page: usersPage,
+        limit: 10
+      });
+      if (res.success) {
+        setUsers(res.users || []);
+        setUsersTotal(res.total || 0);
+        setUsersTotalPages(res.totalPages || 1);
+      }
+    } catch (err) {
+      console.warn('Could not fetch users:', err.message);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [userSearch, userRoleFilter, userStatusFilter, userCityFilter, usersPage]);
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers();
+    }
+  }, [activeTab, fetchUsers]);
+
+  const handleUpdateUserStatus = async () => {
+    if (!actionTargetUser) return;
+    setActionSubmitting(true);
+    setActionMessage(null);
+    try {
+      const res = await adminApi.updateUserStatus(actionTargetUser._id, {
+        status: actionStatusType,
+        reason: actionReason
+      });
+      if (res.success) {
+        setActionMessage({ type: 'success', text: res.message });
+        setTimeout(() => {
+          setActionTargetUser(null);
+          setActionReason('');
+          setActionMessage(null);
+          fetchUsers();
+          fetchStatsAndHealth();
+        }, 1200);
+      } else {
+        setActionMessage({ type: 'error', text: res.error || 'Failed to update user status.' });
+      }
+    } catch (err) {
+      setActionMessage({ type: 'error', text: err.message || 'Error communicating with server.' });
+    } finally {
+      setActionSubmitting(false);
+    }
+  };
+
+  // ========================================================
+  // 3. PROVIDER VERIFICATION STATE
+  // ========================================================
+  const [providers, setProviders] = useState([]);
+  const [providersTotal, setProvidersTotal] = useState(0);
+  const [providersPage, setProvidersPage] = useState(1);
+  const [providersTotalPages, setProvidersTotalPages] = useState(1);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [providerVerifFilter, setProviderVerifFilter] = useState('all'); // 'all' | 'pending' | 'verified'
+  const [providerSearch, setProviderSearch] = useState('');
+  const [providerCityFilter, setProviderCityFilter] = useState('all');
+
+  // Provider Verification Modal
+  const [verifyTarget, setVerifyTarget] = useState(null);
+  const [verifyDecision, setVerifyDecision] = useState(true);
+  const [verifyNotes, setVerifyNotes] = useState('');
+  const [verifySubmitting, setVerifySubmitting] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState(null);
+
+  const fetchProviders = useCallback(async () => {
+    setProvidersLoading(true);
+    try {
+      const res = await adminApi.getProviders({
+        verification: providerVerifFilter,
+        q: providerSearch,
+        city: providerCityFilter === 'all' ? undefined : providerCityFilter,
+        page: providersPage,
+        limit: 10
+      });
+      if (res.success) {
+        setProviders(res.providers || []);
+        setProvidersTotal(res.total || 0);
+        setProvidersTotalPages(res.totalPages || 1);
+      }
+    } catch (err) {
+      console.warn('Could not fetch providers queue:', err.message);
+    } finally {
+      setProvidersLoading(false);
+    }
+  }, [providerVerifFilter, providerSearch, providerCityFilter, providersPage]);
+
+  useEffect(() => {
+    if (activeTab === 'providers') {
+      fetchProviders();
+    }
+  }, [activeTab, fetchProviders]);
+
+  // Real-time provider availability listener
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleAvailabilityChanged = ({ providerId, isAvailable }) => {
+      setProviders((prev) =>
+        prev.map((p) => {
+          if (p._id === providerId || p.id === providerId) {
+            return {
+              ...p,
+              providerDetails: {
+                ...(p.providerDetails || {}),
+                isAvailable: isAvailable !== false
+              }
+            };
+          }
+          return p;
+        })
+      );
+    };
+
+    socket.on('provider_availability_changed', handleAvailabilityChanged);
+    return () => {
+      socket.off('provider_availability_changed', handleAvailabilityChanged);
+    };
+  }, []);
+
+  const handleVerifyProvider = async () => {
+    if (!verifyTarget) return;
+    setVerifySubmitting(true);
+    setVerifyMessage(null);
+    try {
+      const res = await adminApi.verifyProvider(verifyTarget._id, {
+        isVerified: verifyDecision,
+        notes: verifyNotes
+      });
+      if (res.success) {
+        setVerifyMessage({ type: 'success', text: res.message });
+        setTimeout(() => {
+          setVerifyTarget(null);
+          setVerifyNotes('');
+          setVerifyMessage(null);
+          fetchProviders();
+          fetchStatsAndHealth();
+        }, 1200);
+      } else {
+        setVerifyMessage({ type: 'error', text: res.error || 'Failed to update verification.' });
+      }
+    } catch (err) {
+      setVerifyMessage({ type: 'error', text: err.message || 'Error submitting verification.' });
+    } finally {
+      setVerifySubmitting(false);
+    }
+  };
+
+  // ========================================================
+  // 4. BOOKINGS OVERSIGHT STATE
+  // ========================================================
+  const [bookings, setBookings] = useState([]);
+  const [bookingsTotal, setBookingsTotal] = useState(0);
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [bookingsTotalPages, setBookingsTotalPages] = useState(1);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
+  const [bookingCityFilter, setBookingCityFilter] = useState('all');
+
+  const fetchBookings = useCallback(async () => {
+    setBookingsLoading(true);
+    try {
+      const res = await adminApi.getBookings({
+        status: bookingStatusFilter,
+        city: bookingCityFilter,
+        page: bookingsPage,
+        limit: 10
+      });
+      if (res.success) {
+        setBookings(res.bookings || []);
+        setBookingsTotal(res.total || 0);
+        setBookingsTotalPages(res.totalPages || 1);
+      }
+    } catch (err) {
+      console.warn('Could not load bookings oversight:', err.message);
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, [bookingStatusFilter, bookingCityFilter, bookingsPage]);
+
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      fetchBookings();
+    }
+  }, [activeTab, fetchBookings]);
+
+  // ========================================================
+  // 5. REVIEWS & REPORTS MODERATION STATE
+  // ========================================================
+  const [reviews, setReviews] = useState([]);
+  const [reviewsTotal, setReviewsTotal] = useState(0);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsTotalPages, setReviewsTotalPages] = useState(1);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewStatusFilter, setReviewStatusFilter] = useState('all');
+  const [reviewReportFilter, setReviewReportFilter] = useState('all'); // 'all' | 'pending_reports' | 'has_reports'
+
+  // Review Moderation Modal
+  const [modTargetReview, setModTargetReview] = useState(null);
+  const [modStatus, setModStatus] = useState('hidden'); // 'hidden' | 'visible'
+  const [modReason, setModReason] = useState('');
+  const [modDismissReports, setModDismissReports] = useState(true);
+  const [modSubmitting, setModSubmitting] = useState(false);
+  const [modMessage, setModMessage] = useState(null);
+
+  const fetchReviews = useCallback(async () => {
+    setReviewsLoading(true);
+    try {
+      const res = await adminApi.getReviews({
+        status: reviewStatusFilter,
+        reported: reviewReportFilter,
+        page: reviewsPage,
+        limit: 10
+      });
+      if (res.success) {
+        setReviews(res.reviews || []);
+        setReviewsTotal(res.total || 0);
+        setReviewsTotalPages(res.totalPages || 1);
+      }
+    } catch (err) {
+      console.warn('Could not fetch reviews for moderation:', err.message);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [reviewStatusFilter, reviewReportFilter, reviewsPage]);
+
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      fetchReviews();
+    }
+  }, [activeTab, fetchReviews]);
+
+  const handleModerateReview = async () => {
+    if (!modTargetReview) return;
+    setModSubmitting(true);
+    setModMessage(null);
+    try {
+      const res = await adminApi.moderateReview(modTargetReview._id, {
+        status: modStatus,
+        reason: modReason,
+        dismissReports: modDismissReports
+      });
+      if (res.success) {
+        setModMessage({ type: 'success', text: res.message });
+        setTimeout(() => {
+          setModTargetReview(null);
+          setModReason('');
+          setModMessage(null);
+          fetchReviews();
+          fetchStatsAndHealth();
+        }, 1200);
+      } else {
+        setModMessage({ type: 'error', text: res.error || 'Failed to moderate review.' });
+      }
+    } catch (err) {
+      setModMessage({ type: 'error', text: err.message || 'Error moderating review.' });
+    } finally {
+      setModSubmitting(false);
+    }
+  };
+
+  // ========================================================
+  // 6. AUDIT LOGS TRAIL STATE
+  // ========================================================
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotalPages, setAuditTotalPages] = useState(1);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const fetchAuditLogs = useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const res = await adminApi.getAuditLogs({
+        page: auditPage,
+        limit: 15
+      });
+      if (res.success) {
+        setAuditLogs(res.logs || []);
+        setAuditTotal(res.total || 0);
+        setAuditTotalPages(res.totalPages || 1);
+      }
+    } catch (err) {
+      console.warn('Could not fetch audit trail:', err.message);
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [auditPage]);
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchAuditLogs();
+    }
+  }, [activeTab, fetchAuditLogs]);
+
+  return (
+    <DashboardLayout
+      title="Administrator Console"
+      subtitle="Platform governance, verification review, and moderation audit"
+    >
+      {/* 1. Header Bar with Administrator Identity */}
+      <div className="card" style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div style={{
+            width: '4rem',
+            height: '4rem',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: '#fee2e2',
+            color: '#dc2626',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <ShieldCheck size={32} />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '1.5rem', margin: 0, color: 'var(--color-text-title)' }}>
+                {user?.name || 'Platform Administrator'}
+              </h1>
+              <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: 700 }}>
+                System Admin
+              </span>
+              <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+                ● Active Status
+              </span>
+            </div>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.86rem', marginTop: '0.2rem', margin: 0 }}>
+              {user?.email} • Admin ID: <code style={{ fontSize: '0.78rem' }}>{user?._id}</code>
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={fetchStatsAndHealth}
+            disabled={statsLoading || healthLoading}
+            className="btn btn-outline btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <RefreshCw size={14} className={statsLoading ? 'animate-spin' : ''} />
+            <span>Refresh Metrics</span>
+          </button>
+          <Button variant="outline" size="sm" onClick={logout} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-danger)', borderColor: '#fca5a5' }}>
+            <LogOut size={14} />
+            <span>Sign Out</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 2. Primary Navigation Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        borderBottom: '1px solid var(--color-border)',
+        marginBottom: '2rem',
+        overflowX: 'auto',
+        paddingBottom: '2px'
+      }}>
+        {[
+          { id: 'overview', label: 'Overview & Diagnostics', icon: Sliders },
+          { id: 'users', label: 'User Accounts', icon: Users, badge: stats?.users?.totalUsers },
+          { id: 'providers', label: 'Verification Queue', icon: UserCheck, badge: stats?.providers?.pendingVerification },
+          { id: 'bookings', label: 'Booking Oversight', icon: Calendar, badge: stats?.bookings?.total },
+          { id: 'reviews', label: 'Review Moderation', icon: Star, badge: stats?.reviews?.pendingReports },
+          { id: 'audit', label: 'Audit Trail', icon: FileText }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              id={`admin-tab-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                border: 'none',
+                background: 'none',
+                borderBottom: isActive ? '3px solid var(--primary-600)' : '3px solid transparent',
+                color: isActive ? 'var(--primary-700)' : 'var(--color-text-muted)',
+                fontWeight: isActive ? 700 : 500,
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+              {tab.badge != null && Number(tab.badge) > 0 && (
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: tab.id === 'providers' || tab.id === 'reviews' ? '#fef3c7' : '#f1f5f9',
+                  color: tab.id === 'providers' || tab.id === 'reviews' ? '#92400e' : '#475569',
+                  fontWeight: 700
+                }}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ========================================================
+          TAB 1: OVERVIEW & SYSTEM METRICS (System Analytics)
+          ======================================================== */}
+      {activeTab === 'overview' && (
+        <div>
+          {/* Analytics Filter & Refresh Toolbar */}
+          <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-title)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Activity size={16} style={{ color: 'var(--primary-600)' }} />
+                <span>Analytics Window:</span>
+              </span>
+              <div style={{ display: 'inline-flex', borderRadius: 'var(--radius-md)', backgroundColor: '#f1f5f9', padding: '3px', gap: '2px' }}>
+                {[
+                  { id: '7d', label: '7 Days' },
+                  { id: '30d', label: '30 Days' },
+                  { id: '90d', label: '90 Days' },
+                  { id: 'all', label: 'All Time' }
+                ].map(tf => {
+                  const isSelected = analyticsTimeframe === tf.id;
+                  return (
+                    <button
+                      key={tf.id}
+                      type="button"
+                      onClick={() => setAnalyticsTimeframe(tf.id)}
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.8rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: isSelected ? '#ffffff' : 'transparent',
+                        color: isSelected ? 'var(--primary-700)' : 'var(--color-text-muted)',
+                        boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {tf.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* City Filter for Analytics */}
+              <select
+                value={analyticsCity}
+                onChange={(e) => setAnalyticsCity(e.target.value)}
+                className="form-control"
+                style={{ height: '34px', fontSize: '0.82rem', padding: '0 0.75rem', width: '160px' }}
+              >
+                <option value="all">All Service Cities</option>
+                {CITIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                Live MongoDB Aggregations
+              </span>
+              <button
+                type="button"
+                onClick={() => fetchStatsAndHealth(analyticsTimeframe, analyticsCity)}
+                disabled={statsLoading}
+                className="btn btn-outline btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', height: '34px' }}
+              >
+                <RefreshCw size={13} className={statsLoading ? 'animate-spin' : ''} />
+                <span>Update</span>
+              </button>
+            </div>
+          </div>
+
+          {statsLoading && !stats ? (
+            <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+              <RefreshCw size={32} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 1rem' }} />
+              <p style={{ color: 'var(--color-text-muted)' }}>Computing real-time platform analytics from database...</p>
+            </div>
+          ) : statsError ? (
+            <div className="alert-box alert-error" style={{ marginBottom: '1.5rem' }}>
+              <AlertCircle size={20} />
+              <span>{statsError}</span>
+            </div>
+          ) : (
+            <>
+              {/* Metric KPI Cards Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                {/* 1. Customers KPI */}
+                <div className="card" style={{ padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Total Customers</span>
+                    <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', backgroundColor: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4338ca' }}>
+                      <Users size={18} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--color-text-title)' }}>
+                    {stats.users?.totalCustomers || 0}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <CheckCircle2 size={12} /> {stats.users?.activeCustomers ?? stats.users?.totalCustomers ?? 0} Active
+                    </span>
+                    {(stats.users?.suspendedCustomers || 0) > 0 && (
+                      <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Ban size={12} /> {stats.users.suspendedCustomers} Suspended
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Service Providers KPI */}
+                <div className="card" style={{ padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Service Technicians</span>
+                    <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0369a1' }}>
+                      <Briefcase size={18} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--color-text-title)' }}>
+                    {stats.providers?.total || 0}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>
+                      {stats.providers?.verified || 0} Verified
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: '#d97706', fontWeight: 600 }}>
+                      • {stats.providers?.pendingVerification || 0} Awaiting
+                    </span>
+                    {(stats.providers?.suspended || 0) > 0 && (
+                      <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 }}>
+                        • {stats.providers.suspended} Suspended
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Bookings KPI */}
+                <div className="card" style={{ padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Platform Bookings</span>
+                    <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
+                      <Calendar size={18} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--color-text-title)' }}>
+                    {stats.bookings?.total || 0}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 700 }}>
+                      ₹{(stats.bookings?.totalRevenue || 0).toLocaleString()} Volume
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: 600 }}>
+                      • {stats.bookings?.completionRate || 0}% Completion
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Customer Reviews KPI */}
+                <div className="card" style={{ padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Customer Reviews</span>
+                    <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', backgroundColor: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b45309' }}>
+                      <Star size={18} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--color-text-title)' }}>
+                    {stats.reviews?.total || 0}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>
+                      {stats.reviews?.visible ?? stats.reviews?.total ?? 0} Published
+                    </span>
+                    {(stats.reviews?.pendingReports || 0) > 0 ? (
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 700 }}>
+                        • {stats.reviews.pendingReports} Flagged Reports
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        • 0 Flagged
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ========================================================
+                  INTERACTIVE BOOKING TRENDS OVER TIME (SVG Chart)
+                  ======================================================== */}
+              <div className="card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-title)', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <TrendingUp size={20} style={{ color: 'var(--primary-600)' }} />
+                      <span>Booking Activity & Demand Trends</span>
+                    </h3>
+                    <p style={{ margin: '0.2rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                      Daily service reservation trajectories and completion velocity over the selected window
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="badge" style={{ backgroundColor: '#e0e7ff', color: '#3730a3', fontWeight: 600 }}>
+                      {analyticsTimeframe === 'all' ? 'All-Time Records' : `Window: Last ${analyticsTimeframe.replace('d', ' Days')}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Render SVG Chart */}
+                {(() => {
+                  const trends = stats.bookingTrends || [];
+                  if (trends.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '3rem 1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px dashed #cbd5e1' }}>
+                        <Calendar size={36} style={{ color: '#94a3b8', margin: '0 auto 0.5rem' }} />
+                        <h4 style={{ margin: '0 0 0.25rem', color: 'var(--color-text-title)', fontSize: '1rem' }}>
+                          No Bookings Recorded In This Window
+                        </h4>
+                        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                          Try switching to "All Time" or selecting "All Service Cities" to inspect historical appointments.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  const svgWidth = 760;
+                  const svgHeight = 220;
+                  const padLeft = 45;
+                  const padRight = 30;
+                  const padTop = 20;
+                  const padBottom = 40;
+                  const plotWidth = svgWidth - padLeft - padRight;
+                  const plotHeight = svgHeight - padTop - padBottom;
+
+                  const maxTotal = Math.max(5, ...trends.map(t => t.total || 0));
+
+                  const points = trends.map((t, idx) => {
+                    const x = padLeft + (trends.length > 1 ? (idx / (trends.length - 1)) * plotWidth : plotWidth / 2);
+                    const yTotal = padTop + plotHeight - ((t.total || 0) / maxTotal) * plotHeight;
+                    const yComp = padTop + plotHeight - ((t.completed || 0) / maxTotal) * plotHeight;
+                    return { ...t, x, yTotal, yComp, idx };
+                  });
+
+                  const totalPathD = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yTotal.toFixed(1)}`, '');
+                  const areaPathD = points.length > 0 
+                    ? `${totalPathD} L ${points[points.length - 1].x.toFixed(1)} ${(padTop + plotHeight).toFixed(1)} L ${points[0].x.toFixed(1)} ${(padTop + plotHeight).toFixed(1)} Z`
+                    : '';
+                  const compPathD = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yComp.toFixed(1)}`, '');
+
+                  const ticks = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
+                    val: Math.round(pct * maxTotal),
+                    y: padTop + plotHeight - pct * plotHeight
+                  }));
+
+                  const labelStep = Math.max(1, Math.ceil(trends.length / 7));
+
+                  return (
+                    <div style={{ position: 'relative' }}>
+                      <svg
+                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                        style={{ width: '100%', height: 'auto', maxHeight: '250px', overflow: 'visible' }}
+                      >
+                        <defs>
+                          <linearGradient id="trendAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.32" />
+                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.01" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid lines */}
+                        {ticks.map((tick, i) => (
+                          <g key={i}>
+                            <line
+                              x1={padLeft}
+                              y1={tick.y}
+                              x2={svgWidth - padRight}
+                              y2={tick.y}
+                              stroke="#e2e8f0"
+                              strokeDasharray={i === 0 ? undefined : '3 3'}
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={padLeft - 8}
+                              y={tick.y + 4}
+                              fontSize="10"
+                              fill="#94a3b8"
+                              textAnchor="end"
+                              fontWeight="500"
+                            >
+                              {tick.val}
+                            </text>
+                          </g>
+                        ))}
+
+                        {/* Shaded Area */}
+                        {areaPathD && (
+                          <path d={areaPathD} fill="url(#trendAreaGrad)" />
+                        )}
+
+                        {/* Total Bookings Line */}
+                        {totalPathD && (
+                          <path
+                            d={totalPathD}
+                            fill="none"
+                            stroke="#2563eb"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* Completed Line */}
+                        {compPathD && (
+                          <path
+                            d={compPathD}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="2"
+                            strokeDasharray="4 3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* Data Points */}
+                        {points.map((p, idx) => {
+                          const isHovered = hoveredTrendPoint?.date === p.date;
+                          return (
+                            <g
+                              key={idx}
+                              onMouseEnter={() => setHoveredTrendPoint(p)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <circle cx={p.x} cy={p.yTotal} r="14" fill="transparent" />
+                              <circle
+                                cx={p.x}
+                                cy={p.yTotal}
+                                r={isHovered ? 6 : 3.5}
+                                fill={isHovered ? '#1d4ed8' : '#3b82f6'}
+                                stroke="#ffffff"
+                                strokeWidth={isHovered ? 2.5 : 1.5}
+                                style={{ transition: 'all 0.15s ease' }}
+                              />
+                              {(idx % labelStep === 0 || idx === points.length - 1) && (
+                                <text
+                                  x={p.x}
+                                  y={svgHeight - 12}
+                                  fontSize="10"
+                                  fill="#64748b"
+                                  textAnchor="middle"
+                                  fontWeight="500"
+                                >
+                                  {p.date ? p.date.slice(5) : ''}
+                                </text>
+                              )}
+                            </g>
+                          );
+                        })}
+                      </svg>
+
+                      {/* Tooltip Card */}
+                      {hoveredTrendPoint && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '0.5rem',
+                            right: '0.5rem',
+                            backgroundColor: '#0f172a',
+                            color: '#ffffff',
+                            padding: '0.65rem 0.95rem',
+                            borderRadius: 'var(--radius-md)',
+                            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.25)',
+                            fontSize: '0.8rem',
+                            zIndex: 10,
+                            minWidth: '180px',
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, color: '#93c5fd', marginBottom: '0.35rem', borderBottom: '1px solid #334155', paddingBottom: '0.25rem' }}>
+                            {hoveredTrendPoint.date}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', margin: '0.2rem 0' }}>
+                            <span style={{ color: '#cbd5e1' }}>Total Bookings:</span>
+                            <strong style={{ color: '#ffffff' }}>{hoveredTrendPoint.total}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', margin: '0.2rem 0' }}>
+                            <span style={{ color: '#86efac' }}>Completed:</span>
+                            <strong style={{ color: '#86efac' }}>{hoveredTrendPoint.completed}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', margin: '0.2rem 0' }}>
+                            <span style={{ color: '#fed7aa' }}>In-Progress:</span>
+                            <strong style={{ color: '#fed7aa' }}>{hoveredTrendPoint.accepted || 0}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', margin: '0.2rem 0' }}>
+                            <span style={{ color: '#cbd5e1' }}>Revenue:</span>
+                            <strong style={{ color: '#facc15' }}>₹{(hoveredTrendPoint.revenue || 0).toLocaleString()}</strong>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Chart Legend */}
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ display: 'inline-block', width: '12px', height: '3px', backgroundColor: '#2563eb', borderRadius: '2px' }} />
+                          <span>Total Bookings</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ display: 'inline-block', width: '12px', height: '0', borderTop: '2px dashed #10b981' }} />
+                          <span>Completed Jobs</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#facc15' }} />
+                          <span>Revenue Generated (₹)</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* ========================================================
+                  APPOINTMENT LIFECYCLE DISTRIBUTION
+                  ======================================================== */}
+              <div className="card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-title)', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Layers size={18} style={{ color: 'var(--primary-600)' }} />
+                      <span>Appointment Lifecycle Distribution</span>
+                    </h3>
+                    <p style={{ margin: '0.2rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                      Proportional distribution across all booking lifecycle states
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                    Total Records: {stats.bookings?.total || 0}
+                  </span>
+                </div>
+
+                {/* Proportional Stacked Progress Bar */}
+                {(() => {
+                  const bStatus = stats.bookings?.byStatus || {};
+                  const totalLife = (bStatus.pending || 0) + (bStatus.accepted || 0) + (bStatus.completed || 0) + (bStatus.cancelled || 0) + (bStatus.rejected || 0);
+                  const getPct = (cnt) => totalLife > 0 ? Math.round((cnt / totalLife) * 100) : 0;
+
+                  return (
+                    <>
+                      <div style={{
+                        display: 'flex',
+                        height: '14px',
+                        borderRadius: 'var(--radius-full)',
+                        overflow: 'hidden',
+                        backgroundColor: '#f1f5f9',
+                        marginBottom: '1.5rem',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        {bStatus.completed > 0 && (
+                          <div
+                            title={`Completed: ${bStatus.completed} (${getPct(bStatus.completed)}%)`}
+                            style={{ width: `${getPct(bStatus.completed)}%`, backgroundColor: '#16a34a' }}
+                          />
+                        )}
+                        {bStatus.accepted > 0 && (
+                          <div
+                            title={`In-Progress: ${bStatus.accepted} (${getPct(bStatus.accepted)}%)`}
+                            style={{ width: `${getPct(bStatus.accepted)}%`, backgroundColor: '#2563eb' }}
+                          />
+                        )}
+                        {bStatus.pending > 0 && (
+                          <div
+                            title={`Pending: ${bStatus.pending} (${getPct(bStatus.pending)}%)`}
+                            style={{ width: `${getPct(bStatus.pending)}%`, backgroundColor: '#d97706' }}
+                          />
+                        )}
+                        {bStatus.cancelled > 0 && (
+                          <div
+                            title={`Cancelled: ${bStatus.cancelled} (${getPct(bStatus.cancelled)}%)`}
+                            style={{ width: `${getPct(bStatus.cancelled)}%`, backgroundColor: '#dc2626' }}
+                          />
+                        )}
+                        {bStatus.rejected > 0 && (
+                          <div
+                            title={`Declined: ${bStatus.rejected} (${getPct(bStatus.rejected)}%)`}
+                            style={{ width: `${getPct(bStatus.rejected)}%`, backgroundColor: '#64748b' }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Status Breakdown Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                        {[
+                          { label: 'Pending Requests', count: bStatus.pending || 0, color: '#92400e', bg: '#fef3c7' },
+                          { label: 'Confirmed / Active', count: bStatus.accepted || 0, color: '#1e40af', bg: '#dbeafe' },
+                          { label: 'Successfully Completed', count: bStatus.completed || 0, color: '#166534', bg: '#dcfce7' },
+                          { label: 'Cancelled', count: bStatus.cancelled || 0, color: '#991b1b', bg: '#fee2e2' },
+                          { label: 'Declined by Tech', count: bStatus.rejected || 0, color: '#475569', bg: '#f1f5f9' }
+                        ].map(item => (
+                          <div
+                            key={item.label}
+                            style={{
+                              padding: '1rem',
+                              borderRadius: 'var(--radius-md)',
+                              backgroundColor: item.bg,
+                              border: `1px solid ${item.color}25`,
+                              textAlign: 'center'
+                            }}
+                          >
+                            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: item.color }}>
+                              {item.count}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: item.color, marginTop: '0.2rem' }}>
+                              {item.label}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: item.color, opacity: 0.85, marginTop: '0.15rem' }}>
+                              {getPct(item.count)}% of total
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* ========================================================
+                  POPULAR SERVICE CATEGORIES BREAKDOWN
+                  ======================================================== */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                {/* 1. Demand: Categories by Bookings */}
+                <div className="card" style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', color: 'var(--color-text-title)', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <BarChart3 size={18} style={{ color: 'var(--primary-600)' }} />
+                        <span>Categories by Booking Demand</span>
+                      </h3>
+                      <p style={{ margin: '0.2rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                        Highest requested trade specializations
+                      </p>
+                    </div>
+                  </div>
+
+                  {(!stats.categories?.byBookings || stats.categories.byBookings.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                      No categorized booking data recorded.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      {(() => {
+                        const maxCount = Math.max(1, ...stats.categories.byBookings.map(c => c.count));
+                        return stats.categories.byBookings.map(c => (
+                          <div key={c.category} style={{ fontSize: '0.85rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                              <strong style={{ color: 'var(--color-text-title)' }}>{c.category}</strong>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                <strong>{c.count}</strong> jobs • ₹{(c.revenue || 0).toLocaleString()}
+                              </span>
+                            </div>
+                            <div style={{ height: '7px', borderRadius: '4px', backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  width: `${Math.round((c.count / maxCount) * 100)}%`,
+                                  height: '100%',
+                                  backgroundColor: 'var(--primary-600)',
+                                  borderRadius: '4px'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Supply: Categories by Providers */}
+                <div className="card" style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', color: 'var(--color-text-title)', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Award size={18} style={{ color: '#0284c7' }} />
+                        <span>Technician Supply by Category</span>
+                      </h3>
+                      <p style={{ margin: '0.2rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                        Registered workforce across service verticals
+                      </p>
+                    </div>
+                  </div>
+
+                  {(!stats.categories?.byProviders || stats.categories.byProviders.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                      No categorized provider profiles recorded.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      {(() => {
+                        const maxCount = Math.max(1, ...stats.categories.byProviders.map(c => c.count));
+                        return stats.categories.byProviders.map(c => (
+                          <div key={c.category} style={{ fontSize: '0.85rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                              <strong style={{ color: 'var(--color-text-title)' }}>{c.category}</strong>
+                              <span style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 600 }}>
+                                {c.count} technicians ({c.verified || 0} verified)
+                              </span>
+                            </div>
+                            <div style={{ height: '7px', borderRadius: '4px', backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  width: `${Math.round((c.count / maxCount) * 100)}%`,
+                                  height: '100%',
+                                  backgroundColor: '#0284c7',
+                                  borderRadius: '4px'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ========================================================
+                  CITY-WISE GEOGRAPHIC DISTRIBUTION
+                  ======================================================== */}
+              <div className="card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-title)', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <MapPin size={18} style={{ color: 'var(--primary-600)' }} />
+                      <span>City-Wise Provider & Booking Distribution</span>
+                    </h3>
+                    <p style={{ margin: '0.2rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                      Live geographic distribution and revenue generation across Maharashtra service hubs
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                    {stats.cityDistribution?.length || 0} Active Hubs
+                  </span>
+                </div>
+
+                {(!stats.cityDistribution || stats.cityDistribution.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--color-text-muted)' }}>
+                    No city distribution data recorded yet.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>City / Service Hub</th>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>Registered Users</th>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>Technicians</th>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>Verified Badge Ratio</th>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>Total Bookings</th>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>Completed Jobs</th>
+                          <th style={{ padding: '0.75rem 0.5rem' }}>Platform Volume</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.cityDistribution.map((cityItem) => {
+                          const verifiedPct = cityItem.providers > 0 ? Math.round((cityItem.verifiedProviders / cityItem.providers) * 100) : 0;
+                          return (
+                            <tr key={cityItem.city} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <strong style={{ color: 'var(--color-text-title)' }}>{cityItem.cityName || cityItem.city}</strong>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>ID: {cityItem.city}</div>
+                              </td>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <span style={{ fontWeight: 600 }}>{cityItem.totalUsers}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: '0.35rem' }}>({cityItem.customers} seekers)</span>
+                              </td>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <span style={{ fontWeight: 600 }}>{cityItem.providers}</span>
+                              </td>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <span style={{
+                                  fontSize: '0.78rem',
+                                  padding: '0.15rem 0.5rem',
+                                  borderRadius: 'var(--radius-full)',
+                                  backgroundColor: verifiedPct > 50 ? '#dcfce7' : '#fef3c7',
+                                  color: verifiedPct > 50 ? '#166534' : '#92400e',
+                                  fontWeight: 600
+                                }}>
+                                  {cityItem.verifiedProviders} / {cityItem.providers} ({verifiedPct}%)
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <strong>{cityItem.totalBookings}</strong>
+                              </td>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <span style={{ color: '#16a34a', fontWeight: 600 }}>{cityItem.completedBookings}</span>
+                              </td>
+                              <td style={{ padding: '0.85rem 0.5rem' }}>
+                                <strong style={{ color: 'var(--primary-700)' }}>₹{(cityItem.revenue || 0).toLocaleString()}</strong>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ========================================================
+                  LIVE SYSTEM HEALTH & TOPOLOGY DIAGNOSTICS CARD
+                  ======================================================== */}
+              {healthData && (
+                <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem', borderLeft: '4px solid var(--primary-600)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <CheckCircle2 size={18} style={{ color: 'var(--color-success)' }} />
+                      <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
+                        Live System Health & Infrastructure Diagnostics
+                      </h4>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                      Uptime: {Math.floor(healthData.uptimeSeconds / 60)} minutes • Database: {healthData.services?.database}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.86rem', color: 'var(--color-text-body)' }}>
+                    <div><strong>API Server:</strong> Operational (Port 5001)</div>
+                    <div><strong>Atlas MongoDB:</strong> Connected & Indexed</div>
+                    <div><strong>Access Controls:</strong> JWT & RBAC Enforced</div>
+                    <div><strong>Active Session:</strong> {user?.email} ({user?.role})</div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 2: USER ACCOUNTS MANAGEMENT
+          ======================================================== */}
+      {activeTab === 'users' && (
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)', margin: 0 }}>
+                Platform Users ({usersTotal})
+              </h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+                Inspect registered customer, provider, and administrative accounts. Suspend or reactivate access.
+              </p>
+            </div>
+
+            {/* Filter Bar */}
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search name, email..."
+                  value={userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setUsersPage(1);
+                  }}
+                  className="form-control"
+                  style={{ paddingLeft: '2rem', height: '36px', fontSize: '0.85rem', width: '190px' }}
+                />
+                <Search size={14} style={{ position: 'absolute', left: '0.7rem', top: '11px', color: '#94a3b8' }} />
+              </div>
+
+              <select
+                value={userRoleFilter}
+                onChange={(e) => {
+                  setUserRoleFilter(e.target.value);
+                  setUsersPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem', width: '120px' }}
+              >
+                <option value="all">All Roles</option>
+                <option value="customer">Customers</option>
+                <option value="provider">Providers</option>
+                <option value="admin">Admins</option>
+              </select>
+
+              <select
+                value={userStatusFilter}
+                onChange={(e) => {
+                  setUserStatusFilter(e.target.value);
+                  setUsersPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem', width: '120px' }}
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+
+              <select
+                value={userCityFilter}
+                onChange={(e) => {
+                  setUserCityFilter(e.target.value);
+                  setUsersPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem', width: '140px' }}
+              >
+                <option value="all">All Cities</option>
+                {CITIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Users Table */}
+          {usersLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 0.5rem' }} />
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>Loading user accounts...</p>
+            </div>
+          ) : users.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+              <Users size={36} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+              <p style={{ margin: 0 }}>No users found matching the selected filter criteria.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Name & Email</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Role</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>City</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Registered</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => {
+                    const isSelf = user?._id === u._id;
+                    const isSuspended = u.status === 'suspended';
+                    return (
+                      <tr key={u._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                          <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{u.name}</strong>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{u.email}</span>
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                          <span className={`badge ${u.role === 'admin' ? 'badge-prototype' : u.role === 'provider' ? 'badge-primary' : ''}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', color: 'var(--color-text-body)' }}>
+                          {u.cityName || u.city || '—'}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                          <span style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: isSuspended ? '#fee2e2' : '#dcfce7',
+                            color: isSuspended ? '#991b1b' : '#166534'
+                          }}>
+                            {isSuspended ? 'Suspended' : 'Active'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                          {new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedUserDetail(u)}
+                              className="btn btn-outline btn-sm"
+                              title="View full account profile"
+                            >
+                              <Eye size={13} />
+                            </button>
+
+                            {!isSelf && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActionTargetUser(u);
+                                  setActionStatusType(isSuspended ? 'active' : 'suspended');
+                                  setActionReason('');
+                                  setActionMessage(null);
+                                }}
+                                className="btn btn-sm"
+                                style={{
+                                  backgroundColor: isSuspended ? '#dcfce7' : '#fee2e2',
+                                  color: isSuspended ? '#166534' : '#991b1b',
+                                  border: `1px solid ${isSuspended ? '#86efac' : '#fca5a5'}`
+                                }}
+                                title={isSuspended ? 'Reactivate user account' : 'Suspend user account'}
+                              >
+                                {isSuspended ? <RotateCcw size={13} /> : <Ban size={13} />}
+                                <span style={{ marginLeft: '0.25rem' }}>{isSuspended ? 'Reactivate' : 'Suspend'}</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Pagination Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  Page {usersPage} of {usersTotalPages} ({usersTotal} records)
+                </span>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <button
+                    type="button"
+                    disabled={usersPage <= 1}
+                    onClick={() => setUsersPage(prev => Math.max(1, prev - 1))}
+                    className="btn btn-outline btn-sm"
+                  >
+                    <ChevronLeft size={14} /> Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={usersPage >= usersTotalPages}
+                    onClick={() => setUsersPage(prev => Math.min(usersTotalPages, prev + 1))}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 3: PROVIDER VERIFICATION QUEUE
+          ======================================================== */}
+      {activeTab === 'providers' && (
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)', margin: 0 }}>
+                Provider Verification & Credentials ({providersTotal})
+              </h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+                Review technician qualifications, verify trade credentials, and audit verification badge decisions.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search provider, trade..."
+                  value={providerSearch}
+                  onChange={(e) => {
+                    setProviderSearch(e.target.value);
+                    setProvidersPage(1);
+                  }}
+                  className="form-control"
+                  style={{ paddingLeft: '2rem', height: '36px', fontSize: '0.85rem', width: '190px' }}
+                />
+                <Search size={14} style={{ position: 'absolute', left: '0.7rem', top: '11px', color: '#94a3b8' }} />
+              </div>
+
+              <select
+                value={providerVerifFilter}
+                onChange={(e) => {
+                  setProviderVerifFilter(e.target.value);
+                  setProvidersPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem' }}
+              >
+                <option value="all">All Verification States</option>
+                <option value="pending">Awaiting Review (Unverified)</option>
+                <option value="verified">Verified Badge Granted</option>
+              </select>
+
+              <select
+                value={providerCityFilter}
+                onChange={(e) => {
+                  setProviderCityFilter(e.target.value);
+                  setProvidersPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem', width: '140px' }}
+              >
+                <option value="all">All Cities</option>
+                {CITIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {providersLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 0.5rem' }} />
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>Loading provider queue...</p>
+            </div>
+          ) : providers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+              <UserCheck size={36} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+              <p style={{ margin: 0 }}>No providers found in this verification status.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {providers.map((p) => {
+                const isVerified = Boolean(p.providerDetails?.isVerified);
+                const isAvail = p.providerDetails?.isAvailable !== false;
+                return (
+                  <div
+                    key={p._id}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: '#f8fafc',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem'
+                    }}
+                  >
+                    <div style={{ minWidth: '260px', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>{p.name}</strong>
+                        <span style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: 'var(--radius-full)',
+                          backgroundColor: isVerified ? '#dcfce7' : '#fef3c7',
+                          color: isVerified ? '#166534' : '#92400e',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          {isVerified ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                          {isVerified ? 'Verified Professional' : 'Awaiting Verification'}
+                        </span>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: 'var(--radius-full)',
+                          backgroundColor: isAvail ? '#ecfdf5' : '#f1f5f9',
+                          color: isAvail ? '#047857' : '#64748b',
+                          border: `1px solid ${isAvail ? '#a7f3d0' : '#cbd5e1'}`,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}>
+                          <span style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: isAvail ? '#10b981' : '#94a3b8'
+                          }} />
+                          {isAvail ? 'Taking Jobs (Online)' : 'Unavailable (Offline)'}
+                        </span>
+                      </div>
+
+                      <p style={{ margin: '0.2rem 0', fontSize: '0.88rem', color: 'var(--primary-700)', fontWeight: 600 }}>
+                        {p.providerDetails?.title || p.providerDetails?.category || 'Service Technician'} • {p.cityName || p.city}
+                      </p>
+
+                      <p style={{ margin: '0.2rem 0', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                        {p.email} • {p.phoneNumber || 'No phone recorded'} • {p.providerDetails?.experienceYears || 0} yrs experience
+                      </p>
+
+                      {Array.isArray(p.providerDetails?.servicesOffered) && p.providerDetails.servicesOffered.length > 0 && (
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                          {p.providerDetails.servicesOffered.map((s, idx) => (
+                            <span key={idx} style={{ fontSize: '0.75rem', backgroundColor: '#e2e8f0', color: '#334155', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerifyTarget(p);
+                          setVerifyDecision(!isVerified);
+                          setVerifyNotes('');
+                          setVerifyMessage(null);
+                        }}
+                        className={`btn btn-sm ${isVerified ? 'btn-outline' : 'btn-primary'}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          backgroundColor: isVerified ? 'transparent' : '#16a34a',
+                          borderColor: isVerified ? '#fca5a5' : '#16a34a',
+                          color: isVerified ? '#991b1b' : '#ffffff'
+                        }}
+                      >
+                        {isVerified ? <Ban size={14} /> : <CheckCircle2 size={14} />}
+                        <span>{isVerified ? 'Revoke Verification' : 'Grant Verified Badge'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 4: BOOKINGS OVERSIGHT
+          ======================================================== */}
+      {activeTab === 'bookings' && (
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)', margin: 0 }}>
+                Platform Bookings Oversight ({bookingsTotal})
+              </h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+                Read-only appointment ledger. Customer service addresses are masked to preserve user privacy.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <select
+                value={bookingStatusFilter}
+                onChange={(e) => {
+                  setBookingStatusFilter(e.target.value);
+                  setBookingsPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem' }}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="accepted">Accepted</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="rejected">Rejected</option>
+              </select>
+
+              <select
+                value={bookingCityFilter}
+                onChange={(e) => {
+                  setBookingCityFilter(e.target.value);
+                  setBookingsPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem' }}
+              >
+                <option value="all">All Cities</option>
+                {CITIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {bookingsLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 0.5rem' }} />
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>Loading appointment records...</p>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+              <Calendar size={36} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+              <p style={{ margin: 0 }}>No bookings found matching selected filters.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Service & Schedule</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Customer</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Provider</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>City & Locality</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((b) => (
+                    <tr key={b._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{b.serviceName}</strong>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                          {b.bookingDate} at {b.bookingTime}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <span style={{ color: 'var(--color-text-body)' }}>{b.customer?.name || 'Customer'}</span>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>{b.customer?.email}</div>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <span style={{ color: 'var(--color-text-body)' }}>{b.provider?.name || 'Provider'}</span>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>{b.provider?.providerDetails?.title || b.category}</div>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <div>{b.cityName || b.city}</div>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
+                          {b.serviceAddressMasked}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <span style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: 'var(--radius-full)',
+                          backgroundColor:
+                            b.status === 'completed' ? '#dcfce7' :
+                            b.status === 'in_progress' ? '#f3e8ff' :
+                            b.status === 'accepted' ? '#dbeafe' :
+                            b.status === 'pending' ? '#fef3c7' : '#fee2e2',
+                          color:
+                            b.status === 'completed' ? '#166534' :
+                            b.status === 'in_progress' ? '#6b21a8' :
+                            b.status === 'accepted' ? '#1e40af' :
+                            b.status === 'pending' ? '#92400e' : '#991b1b'
+                        }}>
+                          {b.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-text-title)' }}>
+                        ₹{b.price}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Pagination */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  Page {bookingsPage} of {bookingsTotalPages} ({bookingsTotal} appointments)
+                </span>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <button
+                    type="button"
+                    disabled={bookingsPage <= 1}
+                    onClick={() => setBookingsPage(prev => Math.max(1, prev - 1))}
+                    className="btn btn-outline btn-sm"
+                  >
+                    <ChevronLeft size={14} /> Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bookingsPage >= bookingsTotalPages}
+                    onClick={() => setBookingsPage(prev => Math.min(bookingsTotalPages, prev + 1))}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 5: REVIEWS & REPORTS MODERATION
+          ======================================================== */}
+      {activeTab === 'reviews' && (
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)', margin: 0 }}>
+                Reviews Moderation & Report Queue ({reviewsTotal})
+              </h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+                Investigate flagged reviews. Hiding a review recalculates the provider’s live average rating immediately.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <select
+                value={reviewStatusFilter}
+                onChange={(e) => {
+                  setReviewStatusFilter(e.target.value);
+                  setReviewsPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem' }}
+              >
+                <option value="all">All Visibility States</option>
+                <option value="visible">Visible Only</option>
+                <option value="hidden">Hidden by Moderator</option>
+              </select>
+
+              <select
+                value={reviewReportFilter}
+                onChange={(e) => {
+                  setReviewReportFilter(e.target.value);
+                  setReviewsPage(1);
+                }}
+                className="form-control"
+                style={{ height: '36px', fontSize: '0.85rem' }}
+              >
+                <option value="all">All Feedback</option>
+                <option value="pending_reports">Pending Flagged Reports</option>
+                <option value="has_reports">All Reported Reviews</option>
+              </select>
+            </div>
+          </div>
+
+          {reviewsLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 0.5rem' }} />
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>Loading reviews queue...</p>
+            </div>
+          ) : reviews.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+              <Star size={36} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+              <p style={{ margin: 0 }}>No reviews found matching moderation filters.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {reviews.map((r) => {
+                const isHidden = r.status === 'hidden';
+                const pendingReports = r.reports?.filter(rep => rep.status === 'pending') || [];
+                return (
+                  <div
+                    key={r._id}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1px solid ${pendingReports.length > 0 ? '#fca5a5' : isHidden ? '#cbd5e1' : 'var(--color-border)'}`,
+                      backgroundColor: isHidden ? '#f8fafc' : pendingReports.length > 0 ? '#fff5f5' : '#ffffff'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star
+                                key={s}
+                                size={14}
+                                fill={s <= r.rating ? '#d97706' : '#cbd5e1'}
+                                stroke={s <= r.rating ? '#d97706' : '#cbd5e1'}
+                              />
+                            ))}
+                          </div>
+                          <strong style={{ color: '#d97706', fontSize: '0.88rem' }}>{r.rating}.0 Stars</strong>
+
+                          <span style={{
+                            fontSize: '0.76rem',
+                            fontWeight: 700,
+                            padding: '0.1rem 0.45rem',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: isHidden ? '#fee2e2' : '#dcfce7',
+                            color: isHidden ? '#991b1b' : '#166534'
+                          }}>
+                            {isHidden ? 'Hidden by Admin' : 'Publicly Visible'}
+                          </span>
+
+                          {pendingReports.length > 0 && (
+                            <span style={{
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: 'var(--radius-full)',
+                              backgroundColor: '#fee2e2',
+                              color: '#991b1b',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}>
+                              <Flag size={11} /> {pendingReports.length} Flagged Report(s)
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                          By <strong>{r.customer?.name}</strong> for <strong>{r.provider?.name}</strong> ({r.serviceName}) • {new Date(r.createdAt).toLocaleDateString('en-IN')}
+                        </div>
+                      </div>
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModTargetReview(r);
+                            setModStatus(isHidden ? 'visible' : 'hidden');
+                            setModReason('');
+                            setModDismissReports(true);
+                            setModMessage(null);
+                          }}
+                          className={`btn btn-sm ${isHidden ? 'btn-outline' : 'btn-primary'}`}
+                          style={{
+                            backgroundColor: isHidden ? 'transparent' : 'var(--color-danger)',
+                            borderColor: isHidden ? '#94a3b8' : 'var(--color-danger)',
+                            color: isHidden ? '#334155' : '#ffffff'
+                          }}
+                        >
+                          {isHidden ? <RotateCcw size={13} /> : <Ban size={13} />}
+                          <span style={{ marginLeft: '0.25rem' }}>{isHidden ? 'Restore Review' : 'Hide Review'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {r.comment && (
+                      <p style={{ margin: '0.5rem 0', fontSize: '0.9rem', color: 'var(--color-text-body)', fontStyle: 'italic', backgroundColor: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
+                        "{r.comment}"
+                      </p>
+                    )}
+
+                    {isHidden && r.hiddenReason && (
+                      <div style={{ fontSize: '0.8rem', color: '#991b1b', marginTop: '0.4rem' }}>
+                        <strong>Moderation Note:</strong> {r.hiddenReason}
+                      </div>
+                    )}
+
+                    {/* Pending Reports List */}
+                    {pendingReports.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px dashed #fca5a5' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase' }}>User Reports:</span>
+                        {pendingReports.map((rep, idx) => (
+                          <div key={idx} style={{ fontSize: '0.82rem', color: '#7f1d1d', marginTop: '0.2rem' }}>
+                            • <em>"{rep.reason}"</em> — Submitted by {rep.reporter?.name || 'User'} ({rep.reporterRole})
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 6: AUDIT TRAIL
+          ======================================================== */}
+      {activeTab === 'audit' && (
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)', margin: 0 }}>
+                Administrative Audit Trail ({auditTotal})
+              </h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+                Immutable persistent record of all administrative moderation actions, suspensions, and verifications.
+              </p>
+            </div>
+          </div>
+
+          {auditLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 0.5rem' }} />
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>Loading audit logs...</p>
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+              <FileText size={36} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+              <p style={{ margin: 0 }}>No administrative actions recorded yet.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Timestamp</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Admin</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Action</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Target</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Documented Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log) => (
+                    <tr key={log._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '0.65rem 0.5rem', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
+                        {new Date(log.createdAt).toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.5rem' }}>
+                        <strong style={{ color: 'var(--color-text-title)' }}>{log.adminName || log.adminEmail}</strong>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.5rem' }}>
+                        <code style={{
+                          backgroundColor: '#f1f5f9',
+                          padding: '0.2rem 0.4rem',
+                          borderRadius: '4px',
+                          color: '#0f172a',
+                          fontWeight: 600,
+                          fontSize: '0.78rem'
+                        }}>
+                          {log.action}
+                        </code>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.5rem' }}>
+                        <span style={{ fontWeight: 600 }}>{log.targetType}</span>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>ID: {log.targetId}</div>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.5rem', color: 'var(--color-text-body)' }}>
+                        {log.reason || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Pagination */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  Page {auditPage} of {auditTotalPages} ({auditTotal} entries)
+                </span>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <button
+                    type="button"
+                    disabled={auditPage <= 1}
+                    onClick={() => setAuditPage(prev => Math.max(1, prev - 1))}
+                    className="btn btn-outline btn-sm"
+                  >
+                    <ChevronLeft size={14} /> Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={auditPage >= auditTotalPages}
+                    onClick={() => setAuditPage(prev => Math.min(auditTotalPages, prev + 1))}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: USER DETAILS POPUP
+          ======================================================== */}
+      {selectedUserDetail && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--color-text-title)' }}>
+                  User Account Inspection
+                </h3>
+                <span className="badge badge-primary" style={{ marginTop: '0.3rem' }}>
+                  Role: {selectedUserDetail.role}
+                </span>
+              </div>
+              <button type="button" onClick={() => setSelectedUserDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8' }}>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem' }}>
+              <div><strong>Name:</strong> {selectedUserDetail.name}</div>
+              <div><strong>Email:</strong> {selectedUserDetail.email}</div>
+              <div><strong>Phone:</strong> {selectedUserDetail.phoneNumber || 'Not provided'}</div>
+              <div><strong>City:</strong> {selectedUserDetail.cityName || selectedUserDetail.city || 'Sangli'}</div>
+              <div><strong>Status:</strong> {selectedUserDetail.status}</div>
+              <div><strong>User ID:</strong> <code style={{ fontSize: '0.78rem' }}>{selectedUserDetail._id}</code></div>
+              <div><strong>Registration:</strong> {new Date(selectedUserDetail.createdAt).toLocaleString('en-IN')}</div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <Button variant="outline" onClick={() => setSelectedUserDetail(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: USER SUSPENSION / REACTIVATION CONFIRMATION
+          ======================================================== */}
+      {actionTargetUser && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: actionStatusType === 'suspended' ? 'var(--color-danger)' : 'var(--color-success)' }}>
+              <ShieldAlert size={22} />
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
+                Confirm Account {actionStatusType === 'suspended' ? 'Suspension' : 'Reactivation'}
+              </h3>
+            </div>
+
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              {actionStatusType === 'suspended'
+                ? `Are you sure you want to suspend access for ${actionTargetUser.name} (${actionTargetUser.email})? Suspended users are immediately denied access across all platform APIs.`
+                : `Reactivate platform access for ${actionTargetUser.name}? The user will regain ability to sign in and use services.`}
+            </p>
+
+            {actionMessage && (
+              <div className={`alert-box alert-${actionMessage.type}`} style={{ marginBottom: '1.25rem' }}>
+                <span>{actionMessage.text}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Administrative Reason (Recorded to Audit Trail)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Terms violation, account verification resolved..."
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                className="form-control"
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" disabled={actionSubmitting} onClick={() => setActionTargetUser(null)}>
+                Cancel
+              </Button>
+              <button
+                type="button"
+                disabled={actionSubmitting}
+                onClick={handleUpdateUserStatus}
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: actionStatusType === 'suspended' ? 'var(--color-danger)' : 'var(--color-success)',
+                  borderColor: actionStatusType === 'suspended' ? 'var(--color-danger)' : 'var(--color-success)'
+                }}
+              >
+                {actionSubmitting ? 'Executing...' : `Confirm ${actionStatusType === 'suspended' ? 'Suspension' : 'Reactivation'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: PROVIDER VERIFICATION ACTION
+          ======================================================== */}
+      {verifyTarget && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: verifyDecision ? '#16a34a' : '#dc2626' }}>
+              <UserCheck size={22} />
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
+                {verifyDecision ? 'Approve Provider Credentials' : 'Revoke Verified Badge'}
+              </h3>
+            </div>
+
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              {verifyDecision
+                ? `Grant verified badge to ${verifyTarget.name} (${verifyTarget.providerDetails?.title || verifyTarget.providerDetails?.category})? The verification badge will appear across search discovery cards and public profiles.`
+                : `Remove verified badge from ${verifyTarget.name}? The technician will be reverted to unverified status.`}
+            </p>
+
+            {verifyMessage && (
+              <div className={`alert-box alert-${verifyMessage.type}`} style={{ marginBottom: '1.25rem' }}>
+                <span>{verifyMessage.text}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Verification Audit Notes (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Valid trade certification, license check verified..."
+                value={verifyNotes}
+                onChange={(e) => setVerifyNotes(e.target.value)}
+                className="form-control"
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" disabled={verifySubmitting} onClick={() => setVerifyTarget(null)}>
+                Cancel
+              </Button>
+              <button
+                type="button"
+                disabled={verifySubmitting}
+                onClick={handleVerifyProvider}
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: verifyDecision ? '#16a34a' : '#dc2626',
+                  borderColor: verifyDecision ? '#16a34a' : '#dc2626'
+                }}
+              >
+                {verifySubmitting ? 'Recording...' : verifyDecision ? 'Approve & Verify' : 'Revoke Badge'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: REVIEW MODERATION ACTION
+          ======================================================== */}
+      {modTargetReview && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: modStatus === 'hidden' ? '#dc2626' : '#16a34a' }}>
+              <Star size={22} />
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
+                {modStatus === 'hidden' ? 'Hide Inappropriate Review' : 'Restore Review Visibility'}
+              </h3>
+            </div>
+
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              {modStatus === 'hidden'
+                ? `Hiding this review will remove it from public view and automatically recalculate the provider's live average rating. The original review record is preserved for audit history.`
+                : `Restoring this review will make it visible to clients again and include its rating in the provider's score calculation.`}
+            </p>
+
+            {modMessage && (
+              <div className={`alert-box alert-${modMessage.type}`} style={{ marginBottom: '1.25rem' }}>
+                <span>{modMessage.text}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Moderation Reason (Required for Audit Trail)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Abusive language, unverified competitor harassment..."
+                value={modReason}
+                onChange={(e) => setModReason(e.target.value)}
+                className="form-control"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="checkbox"
+                id="dismiss-reports-chk"
+                checked={modDismissReports}
+                onChange={(e) => setModDismissReports(e.target.checked)}
+              />
+              <label htmlFor="dismiss-reports-chk" style={{ fontSize: '0.85rem', color: 'var(--color-text-body)', cursor: 'pointer' }}>
+                Mark pending user reports as resolved / dismissed
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" disabled={modSubmitting} onClick={() => setModTargetReview(null)}>
+                Cancel
+              </Button>
+              <button
+                type="button"
+                disabled={modSubmitting}
+                onClick={handleModerateReview}
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: modStatus === 'hidden' ? 'var(--color-danger)' : '#16a34a',
+                  borderColor: modStatus === 'hidden' ? 'var(--color-danger)' : '#16a34a'
+                }}
+              >
+                {modSubmitting ? 'Saving...' : modStatus === 'hidden' ? 'Hide Review' : 'Restore Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  );
+}
