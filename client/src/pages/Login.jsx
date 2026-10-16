@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AlertCircle, LogIn, CheckCircle2 } from 'lucide-react';
+import PasswordInput from '../components/common/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import { validateEmail } from '../utils/validation';
@@ -161,16 +162,16 @@ export default function Login() {
                 Min 6 characters
               </span>
             </div>
-            <input
-              id="login-password"
-              type="password"
-              className="form-input"
-              placeholder="••••••••"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
+              placeholder="••••••••"
+              name="login-password"
             />
+            {/* Forgot Password Link */}
+            <div style={{ marginBottom: '0.75rem', textAlign: 'right' }}>
+              <Link to="/forgot-password" className="forgot-link" style={{ fontSize: '0.85rem', color: 'var(--primary-600)' }}>Forgot password?</Link>
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
