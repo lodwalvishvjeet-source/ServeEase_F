@@ -1,8 +1,10 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { normalizeCity, SUPPORTED_CITIES } from '../config/cities.js';
 import { validateEmail, validateIndianMobile } from '../utils/validation.js';
 import { getJwtSecret } from '../config/env.js';
+import { sendEmail, isEmailConfigured } from '../utils/email.js';
 
 /**
  * JWT Token Generator
@@ -326,4 +328,188 @@ export const getMe = (req, res) => {
     success: true,
     user: req.user.toSafeObject()
   });
+};
+
+/**
+ * POST /api/auth/forgot-password
+ * Generate 6-digit OTP and send via email
+ */
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email address is required.' });
+    }
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({ success: false, error: emailCheck.error });
+    }
+    const normalizedEmail = emailCheck.normalized;
+
+    // If email delivery service is not configured on the server, report clearly without leaking account existence
+    if (!isEmailConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Password recovery email delivery is currently not configured on this server. Please contact support or configure Gmail SMTP credentials (EMAIL_USER and EMAIL_PASS).'
+      });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      // Uniform generic response prevents user/email enumeration attacks
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists with that email, a 6-digit verification code has been sent.'
+      });
+    }
+
+    // Generate cryptographically secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpires = otpExpires;
+    await user.save();
+
+    // Attempt delivery via Nodemailer
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'ServeEase — Password Reset Code',
+        text: `Your ServeEase password reset code is: ${otp}. It will expire in 15 minutes.\n\nIf you did not request this, please ignore this email.`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #16a34a; text-align: center;">ServeEase Password Reset</h2>
+            <p>Hello <strong>${user.name || 'User'}</strong>,</p>
+            <p>We received a request to reset your password. Use the verification code below:</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0f172a; background: #f1f5f9; padding: 8px 24px; border-radius: 8px; border: 1px dashed #94a3b8;">${otp}</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b;">This code will expire in 15 minutes. If you did not request a password reset, please disregard this email.</p>
+          </div>
+        `
+      });
+    } catch (sendErr) {
+      // Clear generated OTP on delivery failure so an unreachable code doesn't linger
+      user.resetPasswordOtp = null;
+      user.resetPasswordOtpExpires = null;
+      await user.save();
+
+      console.error('❌ Failed to dispatch password reset OTP email:', sendErr.message);
+      return res.status(503).json({
+        success: false,
+        error: 'Unable to deliver verification email via SMTP server. Please check email credentials or try again later.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'If an account exists with that email, a 6-digit verification code has been sent.'
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * POST /api/auth/verify-otp
+ * Verify 6-digit OTP and return a single-use password reset token
+ */
+export const verifyOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: 'Email and 6-digit OTP code are required.' });
+    }
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({ success: false, error: emailCheck.error });
+    }
+    const normalizedEmail = emailCheck.normalized;
+    const user = await User.findOne({ email: normalizedEmail }).select('+resetPasswordOtp +resetPasswordOtpExpires');
+    if (!user || !user.resetPasswordOtp || !user.resetPasswordOtpExpires) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired verification code. Please request a new one.' });
+    }
+
+    if (new Date() > user.resetPasswordOtpExpires) {
+      user.resetPasswordOtp = null;
+      user.resetPasswordOtpExpires = null;
+      await user.save();
+      return res.status(400).json({ success: false, error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    if (user.resetPasswordOtp !== otp.toString().trim()) {
+      return res.status(400).json({ success: false, error: 'Invalid verification code. Please check and try again.' });
+    }
+
+    // Generate reset token valid for 15 minutes
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordOtp = null;
+    user.resetPasswordOtpExpires = null;
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      resetToken,
+      message: 'Verification code verified successfully.'
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Reset user password using verified resetToken
+ */
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email, resetToken, newPassword } = req.body;
+    if (!email || !resetToken || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Email, reset token, and new password are required.' });
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
+    }
+
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({ success: false, error: emailCheck.error });
+    }
+    const normalizedEmail = emailCheck.normalized;
+
+    const user = await User.findOne({ email: normalizedEmail }).select('+resetPasswordToken +resetPasswordTokenExpires +passwordHash');
+    if (!user || !user.resetPasswordToken || !user.resetPasswordTokenExpires) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired password reset session. Please request a new verification code.' });
+    }
+
+    if (new Date() > user.resetPasswordTokenExpires) {
+      user.resetPasswordToken = null;
+      user.resetPasswordTokenExpires = null;
+      await user.save();
+      return res.status(400).json({ success: false, error: 'Password reset session has expired. Please request a new code.' });
+    }
+
+    if (user.resetPasswordToken !== resetToken) {
+      return res.status(400).json({ success: false, error: 'Invalid reset token. Please request a new verification code.' });
+    }
+
+    // Update password
+    const passwordHash = await User.hashPassword(newPassword);
+    user.passwordHash = passwordHash;
+    user.resetPasswordToken = null;
+    user.resetPasswordTokenExpires = null;
+    user.resetPasswordOtp = null;
+    user.resetPasswordOtpExpires = null;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your password has been successfully reset. You can now log in.'
+    });
+  } catch (error) {
+    return next(error);
+  }
 };

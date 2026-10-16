@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User, Briefcase, AlertCircle, UserPlus, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
+import PasswordInput from '../components/common/PasswordInput';
 import Autocomplete from '../components/common/Autocomplete';
 import { SERVICE_CATEGORIES } from '../data/sampleData';
 import { SUPPORTED_CITIES } from '../data/cities';
@@ -255,15 +256,15 @@ export default function Register() {
             <label className="form-label" htmlFor="register-password">
               Create Password <span className="required">*</span>
             </label>
-            <input
+            <PasswordInput
               id="register-password"
-              type="password"
-              className="form-input"
+              name="password"
               placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isLoading}
+              autoComplete="new-password"
             />
           </div>
 

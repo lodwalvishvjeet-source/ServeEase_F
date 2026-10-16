@@ -130,6 +130,27 @@ const userSchema = new mongoose.Schema(
         },
         address: { type: String, trim: true, default: '' }
       }
+    },
+    // Password Reset via Email OTP
+    resetPasswordOtp: {
+      type: String,
+      select: false,
+      default: null
+    },
+    resetPasswordOtpExpires: {
+      type: Date,
+      select: false,
+      default: null
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false,
+      default: null
+    },
+    resetPasswordTokenExpires: {
+      type: Date,
+      select: false,
+      default: null
     }
   },
   {
@@ -137,6 +158,10 @@ const userSchema = new mongoose.Schema(
     toJSON: {
       transform: function (doc, ret) {
         delete ret.passwordHash;
+        delete ret.resetPasswordOtp;
+        delete ret.resetPasswordOtpExpires;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordTokenExpires;
         delete ret.__v;
         return ret;
       }
@@ -144,6 +169,10 @@ const userSchema = new mongoose.Schema(
     toObject: {
       transform: function (doc, ret) {
         delete ret.passwordHash;
+        delete ret.resetPasswordOtp;
+        delete ret.resetPasswordOtpExpires;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordTokenExpires;
         delete ret.__v;
         return ret;
       }

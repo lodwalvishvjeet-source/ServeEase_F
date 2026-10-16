@@ -728,6 +728,61 @@ button {
 }
 
 /* ==========================================================================
+   Password Input with Visibility Toggle
+   ========================================================================== */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .form-input {
+  width: 100%;
+  padding-right: 2.75rem;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 0.35rem;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  z-index: 2;
+  line-height: 1;
+}
+
+.password-toggle-btn:hover {
+  color: var(--color-text-title);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .password-toggle-btn:hover,
+.dark .password-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.password-toggle-btn:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 1px;
+}
+
+.password-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
    Cards & Surfaces
    ========================================================================== */
 .card {

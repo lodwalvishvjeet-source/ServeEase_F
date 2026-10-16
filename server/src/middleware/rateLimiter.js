@@ -37,4 +37,22 @@ export const adminLimiter = rateLimit({
   }
 });
 
-export default { authLimiter, adminLimiter };
+/**
+ * Password Recovery OTP Rate Limiter
+ * 
+ * Protects `/api/auth/forgot-password` from rapid automated submission and email flooding.
+ */
+export const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  max: process.env.NODE_ENV === 'test' ? 10000 : 5, // Limit each IP to 5 OTP requests per 15 minutes
+  skip: () => process.env.NODE_ENV === 'test',
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  message: {
+    success: false,
+    error: 'Too many verification code requests from this IP address. Please wait a few minutes before trying again.'
+  }
+});
+
+export default { authLimiter, adminLimiter, otpLimiter };

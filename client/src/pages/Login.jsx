@@ -163,10 +163,14 @@ export default function Login() {
               </span>
             </div>
             <PasswordInput
+              id="login-password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              name="login-password"
+              disabled={isLoading}
+              required
+              autoComplete="current-password"
             />
             {/* Forgot Password Link */}
             <div style={{ marginBottom: '0.75rem', textAlign: 'right' }}>

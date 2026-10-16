@@ -167,6 +167,27 @@ export const authApi = {
     return request('/api/auth/logout', {
       method: 'POST'
     });
+  },
+
+  forgotPassword: async (email) => {
+    return request('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  },
+
+  verifyOtp: async (email, otp) => {
+    return request('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    });
+  },
+
+  resetPassword: async (email, resetToken, newPassword) => {
+    return request('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, resetToken, newPassword })
+    });
   }
 };
 
