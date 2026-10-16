@@ -63,22 +63,32 @@ export default function ChatInterface({ role = 'customer' }) {
     try {
       const res = await chatApi.getConversations();
       if (res.success && Array.isArray(res.conversations)) {
-        setConversations(res.conversations);
+        // Deduplicate incoming conversations by canonical ID
+        const uniqueConversations = [];
+        const seenIds = new Set();
+        for (const c of res.conversations) {
+          const id = String(c._id);
+          if (!seenIds.has(id)) {
+            seenIds.add(id);
+            uniqueConversations.push(c);
+          }
+        }
+        setConversations(uniqueConversations);
 
         // Determine which conversation to activate
         let target = null;
         if (selectTargetId) {
-          target = res.conversations.find((c) => c._id === selectTargetId);
+          target = uniqueConversations.find((c) => String(c._id) === String(selectTargetId));
         } else if (activeConvRef.current) {
-          target = res.conversations.find((c) => c._id === activeConvRef.current._id);
+          target = uniqueConversations.find((c) => String(c._id) === String(activeConvRef.current._id));
         } else if (paramConversationId) {
-          target = res.conversations.find((c) => c._id === paramConversationId);
+          target = uniqueConversations.find((c) => String(c._id) === String(paramConversationId));
         }
 
         if (target) {
           setActiveConversation(target);
-        } else if (!activeConvRef.current && res.conversations.length > 0 && window.innerWidth > 768) {
-          setActiveConversation(res.conversations[0]);
+        } else if (!activeConvRef.current && uniqueConversations.length > 0 && window.innerWidth > 768) {
+          setActiveConversation(uniqueConversations[0]);
         }
       }
     } catch (err) {
@@ -89,10 +99,13 @@ export default function ChatInterface({ role = 'customer' }) {
   }, [paramConversationId]);
 
   // Handle URL initiated conversation (e.g. from booking or provider profile)
+  const isInitiatingRef = useRef(false);
   useEffect(() => {
     if (!user) return;
 
     if (paramBookingId || paramProviderId) {
+      if (isInitiatingRef.current) return;
+      isInitiatingRef.current = true;
       const initConversation = async () => {
         try {
           const res = await chatApi.createOrGetConversation({
@@ -101,17 +114,21 @@ export default function ChatInterface({ role = 'customer' }) {
           });
           if (res.success && res.conversation) {
             setActiveConversation(res.conversation);
+            // Replace URL query params so providerId is removed and conversationId is retained
+            setSearchParams({ conversationId: res.conversation._id }, { replace: true });
             loadConversations(res.conversation._id);
           }
         } catch (err) {
           setError(err.message || 'Could not initiate conversation.');
+        } finally {
+          isInitiatingRef.current = false;
         }
       };
       initConversation();
     } else {
       loadConversations();
     }
-  }, [user, paramBookingId, paramProviderId, loadConversations]);
+  }, [user, paramBookingId, paramProviderId, loadConversations, setSearchParams]);
 
   // Load message history when active conversation changes
   useEffect(() => {
@@ -177,21 +194,21 @@ export default function ChatInterface({ role = 'customer' }) {
     const handleNewMessage = (msg) => {
       if (!msg) return;
 
-      const currentConvId = activeConvRef.current?._id;
-      const msgConvId = msg.conversation?._id || msg.conversation;
+      const currentConvId = activeConvRef.current?._id ? String(activeConvRef.current._id) : null;
+      const msgConvId = String(msg.conversation?._id || msg.conversation || '');
 
       if (currentConvId && msgConvId === currentConvId) {
         setMessages((prev) => {
           // Avoid duplicate messages
-          if (prev.some((m) => m._id === msg._id)) return prev;
+          if (prev.some((m) => String(m._id) === String(msg._id))) return prev;
           return [...prev, msg];
         });
         setTimeout(() => scrollToBottom('smooth'), 50);
 
         // Mark as read if received in active window
-        const currentUserId = user?._id || user?.id;
-        const senderId = msg.sender?._id || msg.sender;
-        if (senderId !== currentUserId) {
+        const currentUserId = String(user?._id || user?.id || '');
+        const senderId = String(msg.sender?._id || msg.sender || '');
+        if (senderId && senderId !== currentUserId) {
           chatApi.markAsRead(currentConvId).catch(() => {});
           socket.emit('mark_read', { conversationId: currentConvId });
         }
@@ -199,8 +216,15 @@ export default function ChatInterface({ role = 'customer' }) {
 
       // Update conversations list preview
       setConversations((prev) => {
+        const threadExists = prev.some((c) => String(c._id) === msgConvId);
+        if (!threadExists) {
+          // If a new conversation was started, refresh thread list from backend
+          loadConversations();
+          return prev;
+        }
+
         const updated = prev.map((c) => {
-          if (c._id === msgConvId) {
+          if (String(c._id) === msgConvId) {
             const isCurrent = currentConvId === msgConvId;
             return {
               ...c,
@@ -294,12 +318,16 @@ export default function ChatInterface({ role = 'customer' }) {
   // Join/Leave socket room when activeConversation changes
   useEffect(() => {
     const socket = getSocket();
-    if (!socket || !socket.connected || !activeConversation?._id) return;
+    if (!socket || !activeConversation?._id) return;
 
-    socket.emit('join_conversation', { conversationId: activeConversation._id });
+    if (socket.connected) {
+      socket.emit('join_conversation', { conversationId: activeConversation._id });
+    }
 
     return () => {
-      socket.emit('leave_conversation', { conversationId: activeConversation._id });
+      if (socket.connected) {
+        socket.emit('leave_conversation', { conversationId: activeConversation._id });
+      }
     };
   }, [activeConversation?._id]);
 
@@ -342,6 +370,12 @@ export default function ChatInterface({ role = 'customer' }) {
           setSending(false);
           if (res && res.success) {
             setMessageText('');
+            if (res.message) {
+              setMessages((prev) =>
+                prev.some((m) => String(m._id) === String(res.message._id)) ? prev : [...prev, res.message]
+              );
+              setTimeout(() => scrollToBottom('smooth'), 50);
+            }
           } else if (res && !res.success && res.error) {
             setSendError(res.error);
           } else {
@@ -360,14 +394,16 @@ export default function ChatInterface({ role = 'customer' }) {
     try {
       const res = await chatApi.sendMessage(activeConversation._id, text);
       if (res.success && res.message) {
-        setMessages((prev) => [...prev, res.message]);
+        setMessages((prev) =>
+          prev.some((m) => String(m._id) === String(res.message._id)) ? prev : [...prev, res.message]
+        );
         setMessageText('');
         setTimeout(() => scrollToBottom('smooth'), 50);
 
         // Update local conversation preview
         setConversations((prev) =>
           prev.map((c) =>
-            c._id === activeConversation._id
+            String(c._id) === String(activeConversation._id)
               ? {
                   ...c,
                   lastMessage: {
@@ -412,14 +448,28 @@ export default function ChatInterface({ role = 'customer' }) {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  // Filter conversations by search
-  const filteredConversations = conversations.filter((c) => {
-    const other = getOtherParticipant(c);
-    const q = searchQuery.toLowerCase();
-    const matchName = other.name?.toLowerCase().includes(q);
-    const matchService = c.booking?.serviceName?.toLowerCase().includes(q);
-    return matchName || matchService;
-  });
+  // Filter conversations by search and ensure partner uniqueness
+  const filteredConversations = conversations
+    .filter((c) => {
+      const other = getOtherParticipant(c);
+      const q = searchQuery.toLowerCase();
+      const matchName = other.name?.toLowerCase().includes(q);
+      const matchService = c.booking?.serviceName?.toLowerCase().includes(q);
+      return matchName || matchService;
+    })
+    .filter((c, idx, arr) => {
+      const other = getOtherParticipant(c);
+      const otherId = String(other._id || other.id || '');
+      const bookingId = c.booking?._id || c.booking ? String(c.booking?._id || c.booking) : '';
+      const key = bookingId ? `${otherId}_${bookingId}` : otherId;
+      return arr.findIndex((item) => {
+        const itemOther = getOtherParticipant(item);
+        const itemOtherId = String(itemOther._id || itemOther.id || '');
+        const itemBookingId = item.booking?._id || item.booking ? String(item.booking?._id || item.booking) : '';
+        const itemKey = itemBookingId ? `${itemOtherId}_${itemBookingId}` : itemOtherId;
+        return itemKey === key;
+      }) === idx;
+    });
 
   const activeOther = activeConversation ? getOtherParticipant(activeConversation) : null;
   const currentUserId = user?._id || user?.id;

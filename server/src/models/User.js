@@ -72,6 +72,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    // Overall verification state (pending, approved, rejected)
+    verificationStatus: {
+      type: String,
+      enum: {
+        values: ['pending', 'approved', 'rejected'],
+        message: '{VALUE} is not a valid verification status'
+      },
+      default: 'pending'
+    },
     // Provider profile details (active when role is 'provider')
     providerDetails: {
       category: { type: String, trim: true, default: '' },
@@ -85,6 +94,21 @@ const userSchema = new mongoose.Schema(
       hourlyRate: { type: Number, default: 0 },
       isAvailable: { type: Boolean, default: true },
       isVerified: { type: Boolean, default: false },
+      verificationStatus: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending',
+        index: true
+      },
+      verifiedAt: { type: Date, default: null },
+      verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      verificationNotes: { type: String, trim: true, default: '' },
+      rejectionReason: { type: String, trim: true, default: '' },
+      submittedAt: { type: Date, default: null },
+      verificationDocuments: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'VerificationDocument'
+      }],
       isDemo: { type: Boolean, default: false },
       bio: { type: String, trim: true, default: '' },
       avatar: { type: String, trim: true, default: '' },

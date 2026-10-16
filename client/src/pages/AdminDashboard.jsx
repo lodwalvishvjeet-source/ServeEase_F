@@ -183,10 +183,13 @@ export default function AdminDashboard() {
   const [providerSearch, setProviderSearch] = useState('');
   const [providerCityFilter, setProviderCityFilter] = useState('all');
 
-  // Provider Verification Modal
+  // Provider Verification Modal & Document Review
   const [verifyTarget, setVerifyTarget] = useState(null);
   const [verifyDecision, setVerifyDecision] = useState(true);
   const [verifyNotes, setVerifyNotes] = useState('');
+  const [verifyRejectionReason, setVerifyRejectionReason] = useState('');
+  const [verifyDocs, setVerifyDocs] = useState([]);
+  const [verifyDocsLoading, setVerifyDocsLoading] = useState(false);
   const [verifySubmitting, setVerifySubmitting] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState(null);
 
@@ -246,32 +249,89 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  const openVerifyModal = async (provider, decision) => {
+    setVerifyTarget(provider);
+    setVerifyDecision(decision);
+    setVerifyNotes('');
+    setVerifyRejectionReason('');
+    setVerifyMessage(null);
+    setVerifyDocs([]);
+    setVerifyDocsLoading(true);
+
+    try {
+      const res = await adminApi.getProviderDocuments(provider._id);
+      if (res?.success && Array.isArray(res.documents)) {
+        setVerifyDocs(res.documents);
+      }
+    } catch (err) {
+      console.warn('Could not fetch provider documents for admin:', err.message);
+    } finally {
+      setVerifyDocsLoading(false);
+    }
+  };
+
   const handleVerifyProvider = async () => {
     if (!verifyTarget) return;
+
+    if (!verifyDecision && !verifyRejectionReason.trim()) {
+      setVerifyMessage({ type: 'danger', text: 'Please specify a rejection reason for the audit trail.' });
+      return;
+    }
+
+    if (verifyDecision && verifyDocs.length === 0) {
+      setVerifyMessage({ type: 'danger', text: 'Cannot approve provider without at least one uploaded verification document.' });
+      return;
+    }
+
     setVerifySubmitting(true);
     setVerifyMessage(null);
     try {
       const res = await adminApi.verifyProvider(verifyTarget._id, {
         isVerified: verifyDecision,
-        notes: verifyNotes
+        notes: verifyNotes.trim(),
+        rejectionReason: verifyDecision ? undefined : verifyRejectionReason.trim()
       });
       if (res.success) {
         setVerifyMessage({ type: 'success', text: res.message });
         setTimeout(() => {
           setVerifyTarget(null);
           setVerifyNotes('');
+          setVerifyRejectionReason('');
           setVerifyMessage(null);
+          setVerifyDocs([]);
           fetchProviders();
           fetchStatsAndHealth();
         }, 1200);
       } else {
-        setVerifyMessage({ type: 'error', text: res.error || 'Failed to update verification.' });
+        setVerifyMessage({ type: 'danger', text: res.error || 'Failed to update verification.' });
       }
     } catch (err) {
-      setVerifyMessage({ type: 'error', text: err.message || 'Error submitting verification.' });
+      setVerifyMessage({ type: 'danger', text: err.message || 'Error submitting verification.' });
     } finally {
       setVerifySubmitting(false);
     }
+  };
+
+  const handleViewAdminDocument = async (docId) => {
+    if (!docId || docId === 'undefined') {
+      alert('Document identifier is missing. Cannot view document.');
+      return;
+    }
+    try {
+      const blob = await adminApi.getDocumentBlob(docId);
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+      alert(`Could not open document: ${err.message}`);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes && bytes !== 0) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   // ========================================================
@@ -1578,14 +1638,29 @@ export default function AdminDashboard() {
                           fontWeight: 700,
                           padding: '0.15rem 0.5rem',
                           borderRadius: 'var(--radius-full)',
-                          backgroundColor: isVerified ? '#dcfce7' : '#fef3c7',
-                          color: isVerified ? '#166534' : '#92400e',
+                          backgroundColor: isVerified ? '#dcfce7' : p.providerDetails?.verificationStatus === 'rejected' ? '#fee2e2' : '#fef3c7',
+                          color: isVerified ? '#166534' : p.providerDetails?.verificationStatus === 'rejected' ? '#991b1b' : '#92400e',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.25rem'
                         }}>
-                          {isVerified ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
-                          {isVerified ? 'Verified Professional' : 'Awaiting Verification'}
+                          {isVerified ? <CheckCircle2 size={13} /> : p.providerDetails?.verificationStatus === 'rejected' ? <ShieldAlert size={13} /> : <AlertCircle size={13} />}
+                          {isVerified ? 'Verified Professional' : p.providerDetails?.verificationStatus === 'rejected' ? 'Application Rejected' : 'Awaiting Verification'}
+                        </span>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: 'var(--radius-full)',
+                          backgroundColor: (p.documentCount > 0 || (p.documents && p.documents.length > 0)) ? '#eff6ff' : '#fffbeb',
+                          color: (p.documentCount > 0 || (p.documents && p.documents.length > 0)) ? '#1d4ed8' : '#b45309',
+                          border: `1px solid ${(p.documentCount > 0 || (p.documents && p.documents.length > 0)) ? '#bfdbfe' : '#fde68a'}`,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          <FileText size={12} />
+                          {(p.documentCount ?? (p.documents?.length || 0))} Doc(s)
                         </span>
                         <span style={{
                           fontSize: '0.75rem',
@@ -1628,27 +1703,38 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button
                         type="button"
-                        onClick={() => {
-                          setVerifyTarget(p);
-                          setVerifyDecision(!isVerified);
-                          setVerifyNotes('');
-                          setVerifyMessage(null);
-                        }}
-                        className={`btn btn-sm ${isVerified ? 'btn-outline' : 'btn-primary'}`}
+                        onClick={() => openVerifyModal(p, true)}
+                        className="btn btn-sm btn-primary"
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.35rem',
-                          backgroundColor: isVerified ? 'transparent' : '#16a34a',
-                          borderColor: isVerified ? '#fca5a5' : '#16a34a',
-                          color: isVerified ? '#991b1b' : '#ffffff'
+                          backgroundColor: '#16a34a',
+                          borderColor: '#16a34a',
+                          color: '#ffffff'
                         }}
                       >
-                        {isVerified ? <Ban size={14} /> : <CheckCircle2 size={14} />}
-                        <span>{isVerified ? 'Revoke Verification' : 'Grant Verified Badge'}</span>
+                        <CheckCircle2 size={14} />
+                        <span>{isVerified ? 'Review / Re-verify' : 'Review & Approve'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openVerifyModal(p, false)}
+                        className="btn btn-sm btn-outline"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          borderColor: '#fca5a5',
+                          color: '#991b1b'
+                        }}
+                      >
+                        <Ban size={14} />
+                        <span>{isVerified ? 'Revoke Verification' : 'Reject Application'}</span>
                       </button>
                     </div>
                   </div>
@@ -2236,23 +2322,94 @@ export default function AdminDashboard() {
             padding: '1rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+          <div className="card" style={{ maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: verifyDecision ? '#16a34a' : '#dc2626' }}>
               <UserCheck size={22} />
               <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
-                {verifyDecision ? 'Approve Provider Credentials' : 'Revoke Verified Badge'}
+                {verifyDecision ? 'Approve Provider Credentials' : 'Reject / Revoke Application'}
               </h3>
             </div>
 
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
               {verifyDecision
-                ? `Grant verified badge to ${verifyTarget.name} (${verifyTarget.providerDetails?.title || verifyTarget.providerDetails?.category})? The verification badge will appear across search discovery cards and public profiles.`
-                : `Remove verified badge from ${verifyTarget.name}? The technician will be reverted to unverified status.`}
+                ? `Review submitted credentials for ${verifyTarget.name} (${verifyTarget.providerDetails?.title || verifyTarget.providerDetails?.category || 'Provider'}). Approval enables customer bookings.`
+                : `Reject verification application or revoke credentials for ${verifyTarget.name}. The provider will not appear in customer searches or receive bookings.`}
             </p>
+
+            {/* Document Review Subsection */}
+            <div style={{ marginBottom: '1.25rem', backgroundColor: '#f8fafc', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <strong style={{ fontSize: '0.88rem', color: 'var(--color-text-title)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <FileText size={15} style={{ color: 'var(--primary-600)' }} />
+                  Verification Documents ({verifyDocs.length})
+                </strong>
+                {verifyDocsLoading && (
+                  <RefreshCw size={13} className="spin-animation" style={{ color: 'var(--primary-600)' }} />
+                )}
+              </div>
+
+              {verifyDocsLoading ? (
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', margin: 0 }}>Loading provider documents...</p>
+              ) : verifyDocs.length === 0 ? (
+                <div style={{ padding: '0.75rem', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fef3c7', color: '#92400e', fontSize: '0.82rem' }}>
+                  <AlertCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+                  <strong>No documents uploaded.</strong> Platform security policy strictly requires at least one uploaded document before an SP can be approved.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {verifyDocs.map(doc => {
+                    const docId = doc._id || doc.id;
+                    const typeNames = {
+                      id_proof: 'Government Photo ID',
+                      trade_license: 'Trade License',
+                      address_proof: 'Address Proof',
+                      certification: 'Skill Certification',
+                      other: 'Other Credential'
+                    };
+                    return (
+                      <div key={docId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>
+                            {typeNames[doc.documentType] || doc.documentType}
+                          </span>
+                          <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                            {doc.originalFilename} • {formatFileSize(doc.fileSize)} • {new Date(doc.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleViewAdminDocument(docId)}
+                          className="btn btn-outline btn-sm"
+                          style={{ padding: '0.2rem 0.55rem', fontSize: '0.75rem' }}
+                        >
+                          View Document
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {verifyMessage && (
               <div className={`alert-box alert-${verifyMessage.type}`} style={{ marginBottom: '1.25rem' }}>
                 <span>{verifyMessage.text}</span>
+              </div>
+            )}
+
+            {!verifyDecision && (
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                  Rejection Reason <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Incomplete documentation, unreadable photo ID, expired license..."
+                  value={verifyRejectionReason}
+                  onChange={(e) => setVerifyRejectionReason(e.target.value)}
+                  className="form-control"
+                  required
+                />
               </div>
             )}
 
@@ -2262,7 +2419,7 @@ export default function AdminDashboard() {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Valid trade certification, license check verified..."
+                placeholder="e.g. Valid trade certification verified against state registry..."
                 value={verifyNotes}
                 onChange={(e) => setVerifyNotes(e.target.value)}
                 className="form-control"
@@ -2275,15 +2432,17 @@ export default function AdminDashboard() {
               </Button>
               <button
                 type="button"
-                disabled={verifySubmitting}
+                disabled={verifySubmitting || (verifyDecision && verifyDocs.length === 0)}
                 onClick={handleVerifyProvider}
                 className="btn btn-primary"
                 style={{
-                  backgroundColor: verifyDecision ? '#16a34a' : '#dc2626',
-                  borderColor: verifyDecision ? '#16a34a' : '#dc2626'
+                  backgroundColor: verifyDecision ? (verifyDocs.length === 0 ? '#9ca3af' : '#16a34a') : '#dc2626',
+                  borderColor: verifyDecision ? (verifyDocs.length === 0 ? '#9ca3af' : '#16a34a') : '#dc2626',
+                  cursor: (verifyDecision && verifyDocs.length === 0) ? 'not-allowed' : 'pointer'
                 }}
+                title={verifyDecision && verifyDocs.length === 0 ? 'Cannot approve provider without at least one uploaded verification document' : ''}
               >
-                {verifySubmitting ? 'Recording...' : verifyDecision ? 'Approve & Verify' : 'Revoke Badge'}
+                {verifySubmitting ? 'Recording...' : verifyDecision ? 'Approve & Verify' : 'Confirm Rejection'}
               </button>
             </div>
           </div>

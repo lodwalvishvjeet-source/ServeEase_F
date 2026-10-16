@@ -75,7 +75,12 @@ const createProvider = async (customEmail = null) => {
       hourlyRate: 150
     }
   });
-  return { token: res.body.token, user: res.body.user };
+  await User.findByIdAndUpdate(res.body.user._id, {
+    'providerDetails.isVerified': true,
+    'providerDetails.verificationStatus': 'approved'
+  });
+  const updatedUser = await User.findById(res.body.user._id);
+  return { token: res.body.token, user: updatedUser };
 };
 
 // Helper: provision admin

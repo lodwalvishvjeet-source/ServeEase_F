@@ -4,11 +4,12 @@ import Booking from '../models/Booking.js';
 import Review from '../models/Review.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
+import VerificationDocument from '../models/VerificationDocument.js';
 import { recalculateProviderRating } from './reviewController.js';
 import { getCityDisplayName, normalizeCity } from '../config/cities.js';
 
 // Safe customer / provider projection for admin views
-const USER_SAFE_FIELDS = 'name email role city phoneNumber status providerDetails createdAt updatedAt';
+const USER_SAFE_FIELDS = 'name email role city phoneNumber status verificationStatus providerDetails createdAt updatedAt';
 
 /**
  * Helper to compute platform analytics and distributions directly from MongoDB
@@ -650,10 +651,36 @@ export const getAdminProviders = async (req, res, next) => {
       User.countDocuments(filter)
     ]);
 
-    const formatted = providers.map(p => ({
-      ...p,
-      cityName: getCityDisplayName(p.city)
-    }));
+    // Attach verification documents metadata to each provider
+    const providerIds = providers.map(p => p._id);
+    const documents = await VerificationDocument.find({ provider: { $in: providerIds } })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const docsByProvider = {};
+    for (const doc of documents) {
+      const pid = doc.provider.toString();
+      if (!docsByProvider[pid]) {
+        docsByProvider[pid] = [];
+      }
+      delete doc.gridFsFileId;
+      delete doc.__v;
+      const idStr = doc._id.toString();
+      doc._id = idStr;
+      doc.id = idStr;
+      docsByProvider[pid].push(doc);
+    }
+
+    const formatted = providers.map(p => {
+      const pDocs = docsByProvider[p._id.toString()] || [];
+      return {
+        ...p,
+        cityName: getCityDisplayName(p.city),
+        documents: pDocs,
+        documentCount: pDocs.length,
+        hasPendingDocuments: pDocs.some(d => d.status === 'pending')
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -698,13 +725,43 @@ export const verifyProvider = async (req, res, next) => {
       provider.providerDetails = {};
     }
 
+    // Rule: Approval strictly requires at least one uploaded verification document
+    const qualifyingDocs = await VerificationDocument.find({ provider: id });
+    if (isVerified && qualifyingDocs.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot approve service provider without at least one uploaded and valid verification document.'
+      });
+    }
+
     const previousVerified = Boolean(provider.providerDetails.isVerified);
+    const decisionStatus = isVerified ? 'approved' : 'rejected';
+
     provider.providerDetails.isVerified = isVerified;
+    provider.providerDetails.verificationStatus = decisionStatus;
+    provider.verificationStatus = decisionStatus;
     provider.providerDetails.verifiedAt = new Date();
     provider.providerDetails.verifiedBy = req.user._id;
     provider.providerDetails.verificationNotes = (notes || '').trim();
+    if (!isVerified) {
+      provider.providerDetails.rejectionReason = (notes || '').trim();
+    }
 
     await provider.save();
+
+    // Update document review statuses in the separate metadata collection
+    await VerificationDocument.updateMany(
+      { provider: id, status: 'pending' },
+      {
+        $set: {
+          status: decisionStatus,
+          reviewedBy: req.user._id,
+          reviewedAt: new Date(),
+          reviewNotes: (notes || '').trim(),
+          rejectionReason: !isVerified ? (notes || '').trim() : ''
+        }
+      }
+    );
 
     // Record persistent audit log
     const auditAction = isVerified ? 'provider_verified' : 'provider_rejected';
@@ -721,7 +778,9 @@ export const verifyProvider = async (req, res, next) => {
         providerEmail: provider.email,
         category: provider.providerDetails.category,
         previousVerified,
-        newVerified: isVerified
+        newVerified: isVerified,
+        verificationStatus: decisionStatus,
+        documentCount: qualifyingDocs.length
       }
     });
 

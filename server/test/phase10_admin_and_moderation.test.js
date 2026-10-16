@@ -9,6 +9,7 @@ import Booking from '../src/models/Booking.js';
 import Notification from '../src/models/Notification.js';
 import Review from '../src/models/Review.js';
 import AuditLog from '../src/models/AuditLog.js';
+import VerificationDocument from '../src/models/VerificationDocument.js';
 
 let mongoServer;
 
@@ -34,6 +35,7 @@ test.beforeEach(async () => {
   await Notification.deleteMany({});
   await Review.deleteMany({});
   await AuditLog.deleteMany({});
+  await VerificationDocument.deleteMany({});
 });
 
 // Helper: Register standard customer
@@ -477,7 +479,31 @@ test('9. Admin verification approves provider, persists status, creates notifica
   const { user: provider } = await registerProvider();
   assert.equal(provider.providerDetails.isVerified, false);
 
-  // Admin approves verification
+  // 1. Attempting approval without any uploaded document is blocked
+  const blockedRes = await request(app)
+    .patch(`/api/admin/providers/${provider._id}/verify`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      isVerified: true,
+      notes: 'Govt electrical contractor license and Aadhaar verified.'
+    });
+
+  assert.equal(blockedRes.status, 400);
+  assert.equal(blockedRes.body.success, false);
+  assert.ok(blockedRes.body.error.includes('at least one uploaded and valid verification document'));
+
+  // 2. Provider uploads / has a qualifying document
+  await VerificationDocument.create({
+    provider: provider._id,
+    gridFsFileId: new mongoose.Types.ObjectId(),
+    documentType: 'trade_license',
+    originalFilename: 'govt_license.pdf',
+    mimeType: 'application/pdf',
+    fileSize: 2048,
+    status: 'pending'
+  });
+
+  // 3. Admin approves verification with document present
   const verifyRes = await request(app)
     .patch(`/api/admin/providers/${provider._id}/verify`)
     .set('Authorization', `Bearer ${adminToken}`)
@@ -698,7 +724,7 @@ test('12. Audit logs are protected and cannot be viewed or mutated by ordinary u
 // ============================================================================
 test('13. Core booking and notification flow continues working seamlessly', async () => {
   const { token: customerToken, user: customer } = await registerCustomer();
-  const { token: providerToken, user: provider } = await registerProvider();
+  const { token: providerToken, user: provider } = await registerProvider(null, true);
 
   // 1. Customer creates a booking
   const bookRes = await request(app)

@@ -92,7 +92,8 @@ test('2. Searching providers by keyword (q) matches technician name, service off
         serviceArea: 'Vishrambag',
         startingPrice: 350,
         experienceYears: 8,
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     },
     {
@@ -110,7 +111,8 @@ test('2. Searching providers by keyword (q) matches technician name, service off
         serviceArea: 'Gaonbhag',
         startingPrice: 200,
         experienceYears: 5,
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     }
   ]);
@@ -151,7 +153,8 @@ test('3. Provider discovery strictly confines results to the requested canonical
         categorySlug: 'carpentry',
         title: 'Furniture Specialist',
         serviceArea: 'Kothrud',
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     },
     {
@@ -166,7 +169,8 @@ test('3. Provider discovery strictly confines results to the requested canonical
         categorySlug: 'driver-services',
         title: 'Highway Chauffeur',
         serviceArea: 'Bandra',
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     }
   ]);
@@ -205,7 +209,8 @@ test('4. Category filter returns only providers belonging to the selected catego
         title: 'Deep House Cleaning Pro',
         servicesOffered: ['Full House Scrubbing', 'Kitchen Degreasing'],
         serviceArea: 'Dharampeth',
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     },
     {
@@ -221,7 +226,8 @@ test('4. Category filter returns only providers belonging to the selected catego
         title: 'Texture & Waterproof Painter',
         servicesOffered: ['Damp Proofing', 'Living Room Paint'],
         serviceArea: 'Sitabuldi',
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     }
   ]);
@@ -485,6 +491,11 @@ test('11. Password hash and internal version keys are excluded from all provider
   });
 
   assert.ok(user, 'Provider should have been created');
+
+  await User.findByIdAndUpdate(user._id, {
+    'providerDetails.isVerified': true,
+    'providerDetails.verificationStatus': 'approved'
+  });
 
   // Discovery list query
   const listRes = await request(app).get('/api/providers?city=pune');

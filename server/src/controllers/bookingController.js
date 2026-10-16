@@ -6,6 +6,7 @@ import Conversation from '../models/Conversation.js';
 import { getIO } from '../socket/index.js';
 import { normalizeCity, isValidCity, getCityDisplayName, SUPPORTED_CITIES } from '../config/cities.js';
 import { validateBookingSlot, getKolkataNow } from '../utils/dateTime.js';
+import { checkProviderBookingEligibility } from '../utils/providerEligibility.js';
 
 /**
  * Helper: Sanitized population options for Customer and Provider references
@@ -92,18 +93,19 @@ export const createBooking = async (req, res, next) => {
     }
 
     const provider = await User.findById(providerId);
-    if (!provider || provider.role !== 'provider' || provider.status !== 'active') {
+    if (!provider || provider.role !== 'provider') {
       return res.status(404).json({
         success: false,
         error: 'Selected service technician not found or is currently inactive.'
       });
     }
 
-    // Provider availability check: offline providers cannot receive new booking assignments
-    if (provider.providerDetails?.isAvailable === false) {
-      return res.status(400).json({
+    // Provider eligibility check (active, verified, available)
+    const eligibility = checkProviderBookingEligibility(provider);
+    if (!eligibility.eligible) {
+      return res.status(eligibility.statusCode).json({
         success: false,
-        error: `Technician "${provider.name}" is currently offline and not accepting new booking requests. Please check back later or choose another provider.`
+        error: eligibility.error
       });
     }
 
@@ -568,6 +570,15 @@ export const acceptBooking = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         error: 'You are not the technician assigned to this booking request.'
+      });
+    }
+
+    // Verify provider is still active and verified before accepting bookings
+    const eligibility = checkProviderBookingEligibility(req.user);
+    if (!eligibility.eligible) {
+      return res.status(eligibility.statusCode).json({
+        success: false,
+        error: eligibility.error
       });
     }
 

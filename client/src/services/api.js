@@ -12,7 +12,22 @@
 
 // Strip trailing slashes if configured
 const rawBase = import.meta.env.VITE_API_URL || '';
-export const API_BASE_URL = rawBase.replace(/\/+$/, '');
+const resolveApiBaseUrl = () => {
+  const trimmed = rawBase.replace(/\/+$/, '');
+  // If running in a browser on a secondary device/LAN IP, but rawBase was hardcoded to localhost,
+  // fall back to relative path so Vite proxy forwards requests to backend server safely.
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1' &&
+    (trimmed.includes('localhost') || trimmed.includes('127.0.0.1'))
+  ) {
+    return '';
+  }
+  return trimmed;
+};
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Core HTTP Request Wrapper
@@ -33,8 +48,8 @@ async function request(endpoint, options = {}) {
     headers
   };
 
-  // Do not set Content-Type if there's no body
-  if (!config.body) {
+  // Do not set Content-Type if there's no body or if body is FormData (let browser set multipart boundary)
+  if (!config.body || (typeof FormData !== 'undefined' && config.body instanceof FormData)) {
     delete config.headers['Content-Type'];
   }
 
@@ -77,6 +92,47 @@ async function request(endpoint, options = {}) {
   }
 
   return data;
+}
+
+/**
+ * Helper to retrieve binary document blobs (PDFs, images) with authentication
+ */
+export async function fetchDocumentBlob(endpoint) {
+  if (!endpoint || endpoint.includes('/undefined') || endpoint.endsWith('undefined')) {
+    throw new Error('Valid document identifier is required.');
+  }
+
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+  const headers = {};
+  const token = typeof window !== 'undefined'
+    ? (localStorage.getItem('token') || sessionStorage.getItem('token'))
+    : null;
+
+  if (token && token !== 'null' && token !== 'undefined') {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers
+  });
+
+  if (!res.ok) {
+    let errorMsg = `Failed to retrieve document (${res.status})`;
+    try {
+      const errJson = await res.json();
+      if (errJson?.error) errorMsg = errJson.error;
+    } catch {
+      // response is binary or not JSON
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.blob();
 }
 
 /**
@@ -227,6 +283,32 @@ export const providerApi = {
     return request(`/api/providers/my-services/${encodeURIComponent(serviceName)}`, {
       method: 'DELETE'
     });
+  },
+
+  uploadDocument: async (formData) => {
+    return request('/api/providers/documents', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  getDocuments: async () => {
+    return request('/api/providers/documents', {
+      method: 'GET'
+    });
+  },
+
+  deleteDocument: async (id) => {
+    return request(`/api/providers/documents/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
+
+  getDocumentBlob: async (id) => {
+    if (!id || id === 'undefined') {
+      throw new Error('Valid document identifier is required.');
+    }
+    return fetchDocumentBlob(`/api/providers/documents/${encodeURIComponent(id)}`);
   }
 };
 
@@ -474,6 +556,19 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify(data)
     });
+  },
+
+  getProviderDocuments: async (providerId) => {
+    return request(`/api/admin/providers/${encodeURIComponent(providerId)}/documents`, {
+      method: 'GET'
+    });
+  },
+
+  getDocumentBlob: async (documentId) => {
+    if (!documentId || documentId === 'undefined') {
+      throw new Error('Valid document identifier is required.');
+    }
+    return fetchDocumentBlob(`/api/admin/documents/${encodeURIComponent(documentId)}`);
   },
 
   getBookings: async (params = {}) => {

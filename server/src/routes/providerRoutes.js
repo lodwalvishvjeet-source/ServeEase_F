@@ -10,6 +10,13 @@ import {
   deleteMyService
 } from '../controllers/providerController.js';
 import { getMyProfile, updateMyProfile } from '../controllers/userController.js';
+import { 
+  uploadDocument, 
+  getMyDocuments, 
+  getDocumentById, 
+  deleteDocument 
+} from '../controllers/documentController.js';
+import handleUploadMiddleware from '../middleware/upload.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorizeRole } from '../middleware/authorizeRole.js';
 
@@ -42,6 +49,14 @@ router.patch('/my-services', authenticate, authorizeRole('provider'), updateMySe
 router.put('/my-services/:serviceName', authenticate, authorizeRole('provider'), updateMyService);
 router.delete('/my-services', authenticate, authorizeRole('provider'), deleteMyService);
 router.delete('/my-services/:serviceName', authenticate, authorizeRole('provider'), deleteMyService);
+
+/**
+ * Authenticated Provider Verification Documents (Role restricted: provider only)
+ */
+router.post('/documents', authenticate, authorizeRole('provider'), handleUploadMiddleware, uploadDocument);
+router.get('/documents', authenticate, authorizeRole('provider'), getMyDocuments);
+router.get('/documents/:id', authenticate, getDocumentById);
+router.delete('/documents/:id', authenticate, authorizeRole('provider'), deleteDocument);
 
 /**
  * Public Provider Discovery Queries

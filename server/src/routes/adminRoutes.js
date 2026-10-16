@@ -12,6 +12,7 @@ import {
   moderateReview,
   getAdminAuditLogs
 } from '../controllers/adminController.js';
+import { getDocumentById, getProviderDocumentsForAdmin } from '../controllers/documentController.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorizeRole } from '../middleware/authorizeRole.js';
 import { adminLimiter } from '../middleware/rateLimiter.js';
@@ -36,6 +37,8 @@ router.patch('/users/:id/status', updateUserStatus);
 // 3. Provider Verification & Credentials
 router.get('/providers', getAdminProviders);
 router.patch('/providers/:id/verify', verifyProvider);
+router.get('/providers/:id/documents', getProviderDocumentsForAdmin);
+router.get('/documents/:id', getDocumentById);
 
 // 4. Booking Oversight (Read-only)
 router.get('/bookings', getAdminBookings);

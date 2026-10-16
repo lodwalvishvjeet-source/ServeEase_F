@@ -5,6 +5,9 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { getIO } from '../socket/index.js';
 
+// In-memory concurrency lock to prevent simultaneous requests from creating duplicate conversations
+const pendingCreations = new Map();
+
 /**
  * GET /api/conversations
  * List all conversations where the authenticated user is an authorized participant
@@ -20,9 +23,26 @@ export const getConversations = async (req, res, next) => {
       .populate('participants', 'name email role city phoneNumber providerDetails.avatar providerDetails.category providerDetails.title')
       .populate('booking', 'serviceName bookingDate bookingTime status price city serviceAddress completedAt customer provider');
 
+    // Deduplicate conversations so each participant pair has exactly one logical conversation entry
+    const seenPairs = new Set();
+    const uniqueConversations = [];
+
+    for (const conv of conversations) {
+      const otherParticipant = conv.participants?.find(
+        (p) => !p._id.equals(userId)
+      );
+      const otherId = otherParticipant ? otherParticipant._id.toString() : 'unknown';
+      const pairKey = otherId + (conv.booking ? `_${(conv.booking._id || conv.booking).toString()}` : '');
+
+      if (!seenPairs.has(pairKey)) {
+        seenPairs.add(pairKey);
+        uniqueConversations.push(conv);
+      }
+    }
+
     // Calculate unread message counts for each conversation
     const conversationsWithUnread = await Promise.all(
-      conversations.map(async (conv) => {
+      uniqueConversations.map(async (conv) => {
         const unreadCount = await Message.countDocuments({
           conversation: conv._id,
           sender: { $ne: userId },
@@ -81,28 +101,6 @@ export const createOrGetConversation = async (req, res, next) => {
 
       linkedBooking = booking._id;
       targetParticipantId = isCustomer ? booking.provider : booking.customer;
-
-      // Check if conversation already exists for this booking
-      let existingConv = await Conversation.findOne({
-        booking: booking._id,
-        participants: { $all: [userId, targetParticipantId] }
-      })
-        .populate('participants', 'name email role city phoneNumber providerDetails.avatar providerDetails.category providerDetails.title')
-        .populate('booking', 'serviceName bookingDate bookingTime status price city serviceAddress completedAt customer provider');
-
-      if (existingConv) {
-        const unreadCount = await Message.countDocuments({
-          conversation: existingConv._id,
-          sender: { $ne: userId },
-          isRead: false
-        });
-        const obj = existingConv.toObject();
-        obj.unreadCount = unreadCount;
-        return res.status(200).json({
-          success: true,
-          conversation: obj
-        });
-      }
     } else if (providerId) {
       // 2. Pre-booking consultation initiated by customer with a provider
       const provider = await User.findOne({ _id: providerId, role: 'provider', status: 'active' });
@@ -138,11 +136,34 @@ export const createOrGetConversation = async (req, res, next) => {
       });
     }
 
-    // Check if an existing direct conversation exists between the two users
-    let existingConv = await Conversation.findOne({
-      participants: { $all: [userId, targetParticipantId] },
-      ...(linkedBooking ? { booking: linkedBooking } : {})
-    })
+    if (userId.equals(targetParticipantId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'You cannot start a conversation with yourself.'
+      });
+    }
+
+    // Canonical sorted participants array ensures customer-provider ordering is invariant
+    const canonicalParticipants = [userId, targetParticipantId].sort((a, b) =>
+      a.toString().localeCompare(b.toString())
+    );
+
+    const canonicalPairKey = `${canonicalParticipants.map((p) => p.toString()).join(':')}${linkedBooking ? ':' + linkedBooking : ''}`;
+
+    // Query for existing conversation:
+    // If bookingId is provided, look for conversation for that booking
+    // If direct providerId is provided, look for ANY existing conversation between this participant pair
+    const existingQuery = {
+      $or: [
+        { pairKey: canonicalPairKey },
+        linkedBooking
+          ? { booking: linkedBooking, participants: { $all: [userId, targetParticipantId] } }
+          : { participants: { $all: [userId, targetParticipantId] } }
+      ]
+    };
+
+    let existingConv = await Conversation.findOne(existingQuery)
+      .sort({ updatedAt: -1 })
       .populate('participants', 'name email role city phoneNumber providerDetails.avatar providerDetails.category providerDetails.title')
       .populate('booking', 'serviceName bookingDate bookingTime status price city serviceAddress completedAt customer provider');
 
@@ -160,23 +181,61 @@ export const createOrGetConversation = async (req, res, next) => {
       });
     }
 
-    // Create new conversation
-    const newConv = await Conversation.create({
-      participants: [userId, targetParticipantId],
-      booking: linkedBooking || null
-    });
+    // Concurrency safety: deduplicate simultaneous in-flight creation requests
+    const lockKey = canonicalPairKey;
 
-    const populatedConv = await Conversation.findById(newConv._id)
-      .populate('participants', 'name email role city phoneNumber providerDetails.avatar providerDetails.category providerDetails.title')
-      .populate('booking', 'serviceName bookingDate bookingTime status price city serviceAddress completedAt customer provider');
+    if (pendingCreations.has(lockKey)) {
+      const existingPromise = pendingCreations.get(lockKey);
+      const result = await existingPromise;
+      return res.status(result.status).json({
+        success: true,
+        conversation: result.conversation
+      });
+    }
 
-    const convObj = populatedConv.toObject();
-    convObj.unreadCount = 0;
+    const creationPromise = (async () => {
+      // Re-check DB in case an earlier request created it right before lock acquisition
+      const doubleCheck = await Conversation.findOne(existingQuery)
+        .sort({ updatedAt: -1 })
+        .populate('participants', 'name email role city phoneNumber providerDetails.avatar providerDetails.category providerDetails.title')
+        .populate('booking', 'serviceName bookingDate bookingTime status price city serviceAddress completedAt customer provider');
 
-    return res.status(201).json({
-      success: true,
-      conversation: convObj
-    });
+      if (doubleCheck) {
+        const unreadCount = await Message.countDocuments({
+          conversation: doubleCheck._id,
+          sender: { $ne: userId },
+          isRead: false
+        });
+        const obj = doubleCheck.toObject();
+        obj.unreadCount = unreadCount;
+        return { status: 200, conversation: obj };
+      }
+
+      const newConv = await Conversation.create({
+        participants: canonicalParticipants,
+        booking: linkedBooking || null,
+        pairKey: canonicalPairKey
+      });
+
+      const populatedConv = await Conversation.findById(newConv._id)
+        .populate('participants', 'name email role city phoneNumber providerDetails.avatar providerDetails.category providerDetails.title')
+        .populate('booking', 'serviceName bookingDate bookingTime status price city serviceAddress completedAt customer provider');
+
+      const convObj = populatedConv.toObject();
+      convObj.unreadCount = 0;
+      return { status: 201, conversation: convObj };
+    })();
+
+    pendingCreations.set(lockKey, creationPromise);
+    try {
+      const result = await creationPromise;
+      return res.status(result.status).json({
+        success: true,
+        conversation: result.conversation
+      });
+    } finally {
+      pendingCreations.delete(lockKey);
+    }
   } catch (error) {
     return next(error);
   }
@@ -419,17 +478,23 @@ export const sendMessage = async (req, res, next) => {
     );
 
     // 3. Deliver via Socket.IO if active
-    const io = getIO();
-    if (io) {
-      io.to(`conversation_${id}`).emit('new_message', populatedMessage);
-    }
-
-    // 4. Create persistent notification for the recipient
     const recipientId = conversation.participants.find(
       (p) => !p.equals(userId)
     );
 
+    const io = getIO();
+    if (io) {
+      // Chaining .to() delivers to both rooms while Socket.IO deduplicates any sockets present in both
+      let broadcast = io.to(`conversation_${id}`);
+      if (recipientId) {
+        broadcast = broadcast.to(`user_${recipientId.toString()}`);
+      }
+      broadcast.emit('new_message', populatedMessage);
+    }
+
+    // 4. Create persistent notification for the recipient
     if (recipientId) {
+
       try {
         await Notification.create({
           recipient: recipientId,

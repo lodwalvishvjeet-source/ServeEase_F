@@ -65,7 +65,7 @@ test('1. City filtering normalizes aliases and confines results to canonical cit
         servicesOffered: ['Switchboard Wiring'],
         startingPrice: 300,
         isAvailable: true,
-        isVerified: false,
+        isVerified: true,
         experienceYears: 3
       }
     }
@@ -109,7 +109,8 @@ test('2. Suspended and non-provider accounts are strictly excluded from discover
       providerDetails: {
         category: 'Plumbing',
         servicesOffered: ['Tap Repair'],
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     },
     {
@@ -167,7 +168,8 @@ test('3. Providers who do not offer the selected category or service do not appe
         category: 'Plumbing',
         title: 'Licensed Plumber',
         servicesOffered: ['Pipe Leakage Repair', 'Drain Cleaning'],
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     },
     {
@@ -181,7 +183,8 @@ test('3. Providers who do not offer the selected category or service do not appe
         category: 'Carpentry',
         title: 'Master Carpenter',
         servicesOffered: ['Furniture Assembly', 'Door Lock Repair'],
-        isAvailable: true
+        isAvailable: true,
+        isVerified: true
       }
     }
   ]);
@@ -273,7 +276,7 @@ test('4. Matching filters for availability, verification, rating, price, and ser
   ]);
 
   // Available filter
-  const availRes = await request(app).get('/api/providers?city=sangli&available=true');
+  const availRes = await request(app).get('/api/providers?city=sangli&available=true&verified=all');
   assert.equal(availRes.status, 200);
   assert.equal(availRes.body.count, 2);
 
@@ -290,7 +293,7 @@ test('4. Matching filters for availability, verification, rating, price, and ser
   assert.equal(ratingRes.body.providers[0].name, 'Elite Verified Tech');
 
   // Price range filter (minPrice=150, maxPrice=350)
-  const priceRes = await request(app).get('/api/providers?city=sangli&minPrice=150&maxPrice=350');
+  const priceRes = await request(app).get('/api/providers?city=sangli&minPrice=150&maxPrice=350&verified=all');
   assert.equal(priceRes.status, 200);
   assert.equal(priceRes.body.count, 2);
   const names = priceRes.body.providers.map(p => p.name);
@@ -375,7 +378,7 @@ test('5. Recommended sort ranks by verified signals without fabricating ratings 
     }
   ]);
 
-  const res = await request(app).get('/api/providers?city=sangli&sort=recommended');
+  const res = await request(app).get('/api/providers?city=sangli&sort=recommended&verified=all');
   assert.equal(res.status, 200);
   assert.equal(res.body.count, 3);
 
@@ -422,6 +425,7 @@ test('6. Pagination splits results accurately with stable tie-breaking', async (
       category: 'Painting',
       startingPrice: 300,
       isAvailable: true,
+      isVerified: true,
       experienceYears: 5
     }
   }));
@@ -471,7 +475,8 @@ test('7. Booking revalidates selected provider and service eligibility', async (
       category: 'Plumbing',
       servicesOffered: ['Pipe Leakage Repair'],
       startingPrice: 250,
-      isAvailable: true
+      isAvailable: true,
+      isVerified: true
     }
   });
 

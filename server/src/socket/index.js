@@ -24,9 +24,11 @@ export const initSocket = (httpServer, allowedOrigins = []) => {
   io.use(async (socket, next) => {
     try {
       // Extract token from handshake auth, authorization header, or HttpOnly cookie
-      let token =
+      let candidate =
         socket.handshake.auth?.token ||
         socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
+
+      let token = candidate && candidate !== 'null' && candidate !== 'undefined' ? candidate : null;
 
       if (!token && socket.handshake.headers?.cookie) {
         const match = socket.handshake.headers.cookie.match(/(?:^|;\s*)token=([^;]+)/);
@@ -269,14 +271,19 @@ export const initSocket = (httpServer, allowedOrigins = []) => {
           'name role providerDetails.avatar'
         );
 
-        // 3. Deliver to room participants
-        io.to(`conversation_${conversationId}`).emit('new_message', populatedMessage);
-
-        // 4. Create persistent notification for the recipient
+        // 3. Deliver to room participants and recipient user channel
         const recipientId = conversation.participants.find(
           (p) => p.toString() !== userId
         );
 
+        // Chaining .to() unions the rooms in Socket.IO so sockets in both rooms receive the packet exactly once
+        let broadcast = io.to(`conversation_${conversationId}`);
+        if (recipientId) {
+          broadcast = broadcast.to(`user_${recipientId.toString()}`);
+        }
+        broadcast.emit('new_message', populatedMessage);
+
+        // 4. Create persistent notification for the recipient
         if (recipientId) {
           try {
             await Notification.create({

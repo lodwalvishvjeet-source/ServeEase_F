@@ -55,6 +55,17 @@ test.beforeEach(async () => {
 // Helper: Register user
 const registerUser = async (userData) => {
   const res = await request(app).post('/api/auth/register').send(userData);
+  if (userData.role === 'provider' && res.body.user) {
+    await User.findByIdAndUpdate(res.body.user._id, {
+      'providerDetails.isVerified': true,
+      'providerDetails.verificationStatus': 'approved',
+      verificationStatus: 'approved'
+    });
+    res.body.user.providerDetails = res.body.user.providerDetails || {};
+    res.body.user.providerDetails.isVerified = true;
+    res.body.user.providerDetails.verificationStatus = 'approved';
+    res.body.user.verificationStatus = 'approved';
+  }
   return { res, token: res.body.token, user: res.body.user };
 };
 

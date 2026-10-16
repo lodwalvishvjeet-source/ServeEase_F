@@ -26,7 +26,10 @@ export const authenticate = async (req, res, next) => {
 
     // 2. Check Bearer Authorization header (fallback or API clients)
     if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-      token = req.headers.authorization.split(' ')[1];
+      const candidate = req.headers.authorization.split(' ')[1];
+      if (candidate && candidate.trim() && candidate !== 'null' && candidate !== 'undefined') {
+        token = candidate.trim();
+      }
     }
 
     if (!token) {

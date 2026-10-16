@@ -13,7 +13,12 @@ import {
   Save, 
   RefreshCw, 
   Lock, 
-  Power
+  Power,
+  FileText,
+  UploadCloud,
+  Trash2,
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -123,6 +128,117 @@ export default function ProviderProfile() {
       console.warn('Could not refresh provider profile:', err.message);
       setFetchError(true);
     }
+  };
+
+  // ========================================================
+  // Document Management & Verification State
+  // ========================================================
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [docUploadLoading, setDocUploadLoading] = useState(false);
+  const [docUploadError, setDocUploadError] = useState('');
+  const [docUploadSuccess, setDocUploadSuccess] = useState('');
+  const [selectedDocType, setSelectedDocType] = useState('id_proof');
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const fetchDocuments = async () => {
+    try {
+      setDocumentsLoading(true);
+      const res = await providerApi.getDocuments();
+      if (res?.success && Array.isArray(res.documents)) {
+        setDocuments(res.documents);
+      }
+    } catch (err) {
+      console.warn('Could not load documents:', err.message);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const handleFileUpload = async (e) => {
+    e.preventDefault();
+    setDocUploadError('');
+    setDocUploadSuccess('');
+
+    if (!selectedFile) {
+      setDocUploadError('Please select a file to upload.');
+      return;
+    }
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setDocUploadError('File exceeds the 5 MB limit. Please select a smaller document.');
+      return;
+    }
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowedTypes.includes(selectedFile.type)) {
+      setDocUploadError('Unsupported format. Allowed formats: PDF, JPEG, PNG.');
+      return;
+    }
+
+    try {
+      setDocUploadLoading(true);
+      const payload = new FormData();
+      payload.append('document', selectedFile);
+      payload.append('documentType', selectedDocType);
+
+      const res = await providerApi.uploadDocument(payload);
+      if (res?.success) {
+        setDocUploadSuccess('Verification document uploaded successfully! It is now pending administrator review.');
+        setSelectedFile(null);
+        const fileEl = document.getElementById('provider-doc-file-input');
+        if (fileEl) fileEl.value = '';
+        await fetchDocuments();
+      } else {
+        setDocUploadError(res?.error || 'Failed to upload document.');
+      }
+    } catch (err) {
+      setDocUploadError(err.message || 'Error uploading document.');
+    } finally {
+      setDocUploadLoading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    try {
+      setDocUploadError('');
+      const res = await providerApi.deleteDocument(docId);
+      if (res?.success) {
+        setDocUploadSuccess('Document removed.');
+        await fetchDocuments();
+      } else {
+        setDocUploadError(res?.error || 'Failed to delete document.');
+      }
+    } catch (err) {
+      setDocUploadError(err.message || 'Error deleting document.');
+    }
+  };
+
+  const handleViewDocument = async (docId) => {
+    if (!docId || docId === 'undefined') {
+      alert('Document identifier is missing. Cannot view document.');
+      return;
+    }
+    try {
+      const blob = await providerApi.getDocumentBlob(docId);
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+      alert(`Could not open document: ${err.message}`);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes && bytes !== 0) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   const handleChange = (e) => {
@@ -408,6 +524,83 @@ export default function ProviderProfile() {
               </div>
             </div>
 
+            {/* Verification Status Card */}
+            <div className="card" style={{ padding: '1.5rem', backgroundColor: '#ffffff', border: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <ShieldCheck size={18} style={{ color: isVerified ? '#16a34a' : user?.providerDetails?.verificationStatus === 'rejected' ? '#dc2626' : '#d97706' }} />
+                <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-title)' }}>Verification Status</h3>
+              </div>
+
+              {isVerified ? (
+                <div>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.3rem 0.7rem',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: '#dcfce7',
+                    color: '#166534',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <CheckCircle2 size={14} />
+                    <span>Verified Professional</span>
+                  </div>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5 }}>
+                    Your credentials have been approved by an administrator. Your profile is active and receiving customer bookings in {getCityDisplayName(formData.city)}.
+                  </p>
+                </div>
+              ) : user?.providerDetails?.verificationStatus === 'rejected' ? (
+                <div>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.3rem 0.7rem',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: '#fee2e2',
+                    color: '#991b1b',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <ShieldAlert size={14} />
+                    <span>Verification Rejected</span>
+                  </div>
+                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#991b1b', display: 'block' }}>Rejection Reason:</span>
+                    <span style={{ fontSize: '0.8rem', color: '#7f1d1d' }}>{user?.providerDetails?.rejectionReason || 'Uploaded documents did not meet verification criteria.'}</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
+                    Please upload valid replacement documents to submit for re-review.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.3rem 0.7rem',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <Clock size={14} />
+                    <span>Pending Verification</span>
+                  </div>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5 }}>
+                    Your application is awaiting administrative review. Ensure at least one government ID or trade license is uploaded below. Bookings are enabled once approved.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Platform Security Rules Callout */}
             <div className="card" style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--color-text-title)', fontWeight: 700, fontSize: '0.9rem' }}>
@@ -420,9 +613,10 @@ export default function ProviderProfile() {
             </div>
           </div>
 
-          {/* Right Column: Comprehensive Edit Form */}
-          <div className="card" style={{ padding: '2rem' }}>
-            <form onSubmit={handleSubmit}>
+          {/* Right Column: Comprehensive Edit Form & Verification Documents */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div className="card" style={{ padding: '2rem' }}>
+              <form onSubmit={handleSubmit}>
               {/* SECTION 1: Personal & Contact Details */}
               <div style={{ marginBottom: '2rem' }}>
                 <h3 style={{ fontSize: '1.15rem', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
@@ -943,8 +1137,223 @@ export default function ProviderProfile() {
               </div>
             </form>
           </div>
+
+          {/* Verification Documents Card */}
+          <div className="card" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--color-text-title)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileText size={20} style={{ color: 'var(--primary-600)' }} />
+                  Verification Documents & Credentials
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0' }}>
+                  Upload government IDs, trade licenses, or certifications for administrator review. Max 5 MB per file (PDF, PNG, JPEG).
+                </p>
+              </div>
+              <div style={{
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                padding: '0.25rem 0.65rem',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: documents.length > 0 ? '#dcfce7' : '#fef3c7',
+                color: documents.length > 0 ? '#166534' : '#92400e'
+              }}>
+                {documents.length} Document(s) Uploaded
+              </div>
+            </div>
+
+            {/* Upload Alerts */}
+            {docUploadSuccess && (
+              <div className="alert-box alert-success" style={{ marginBottom: '1rem' }}>
+                <CheckCircle2 size={16} />
+                <span>{docUploadSuccess}</span>
+              </div>
+            )}
+            {docUploadError && (
+              <div className="alert-box alert-danger" style={{ marginBottom: '1rem' }}>
+                <AlertCircle size={16} />
+                <span>{docUploadError}</span>
+              </div>
+            )}
+
+            {/* Upload Form Box */}
+            <form onSubmit={handleFileUpload} style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '1.5rem' }}>
+              <h4 style={{ fontSize: '0.95rem', margin: '0 0 1rem', color: 'var(--color-text-title)' }}>
+                Upload New Document
+              </h4>
+
+              <div className="grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" htmlFor="provider-doc-type" style={{ fontSize: '0.85rem' }}>
+                    Document Type <span className="required">*</span>
+                  </label>
+                  <select
+                    id="provider-doc-type"
+                    className="form-control"
+                    value={selectedDocType}
+                    onChange={(e) => setSelectedDocType(e.target.value)}
+                    disabled={docUploadLoading}
+                    style={{ fontSize: '0.85rem', height: '38px' }}
+                  >
+                    <option value="id_proof">Government Photo ID (Aadhaar, PAN, Voter ID)</option>
+                    <option value="trade_license">Trade License / Shop Act Registration</option>
+                    <option value="address_proof">Address Proof (Utility Bill, Rent Agreement)</option>
+                    <option value="certification">Professional / Technical Certification</option>
+                    <option value="other">Other Official Credential</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" htmlFor="provider-doc-file-input" style={{ fontSize: '0.85rem' }}>
+                    Select File (PDF, PNG, JPEG, max 5 MB) <span className="required">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    id="provider-doc-file-input"
+                    className="form-control"
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                    onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                    disabled={docUploadLoading}
+                    style={{ fontSize: '0.85rem', height: '38px', padding: '0.35rem' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={docUploadLoading || !selectedFile}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.4rem 1rem' }}
+                >
+                  {docUploadLoading ? (
+                    <>
+                      <RefreshCw size={14} className="spin-animation" /> Uploading Document...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud size={15} /> Upload for Verification
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Uploaded Documents List */}
+            <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.75rem', color: 'var(--color-text-title)' }}>
+              Uploaded Verification Files
+            </h4>
+
+            {documentsLoading ? (
+              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-muted)' }}>
+                <RefreshCw size={20} className="spin-animation" style={{ margin: '0 auto 0.5rem' }} />
+                <p style={{ fontSize: '0.85rem', margin: 0 }}>Loading verification documents...</p>
+              </div>
+            ) : documents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)' }}>
+                <FileText size={28} style={{ color: '#94a3b8', margin: '0 auto 0.5rem' }} />
+                <p style={{ margin: '0 0 0.25rem', fontWeight: 600, color: 'var(--color-text-title)', fontSize: '0.9rem' }}>
+                  No verification documents uploaded yet
+                </p>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  Upload your government ID or trade license using the form above to become eligible for customer bookings.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {documents.map((doc) => {
+                  const typeLabels = {
+                    id_proof: 'Government Photo ID',
+                    trade_license: 'Trade License',
+                    address_proof: 'Address Proof',
+                    certification: 'Professional Certification',
+                    other: 'Other Credential'
+                  };
+                  const statusConfig = {
+                    approved: { label: 'Approved', bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
+                    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#991b1b', icon: ShieldAlert },
+                    pending: { label: 'Pending Review', bg: '#fef3c7', color: '#92400e', icon: Clock }
+                  };
+                  const sc = statusConfig[doc.status] || statusConfig.pending;
+                  const StatusIcon = sc.icon;
+
+                  const docId = doc._id || doc.id;
+                  return (
+                    <div
+                      key={docId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.85rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: '#ffffff',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div style={{ minWidth: '220px', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                          <strong style={{ fontSize: '0.9rem', color: 'var(--color-text-title)' }}>
+                            {typeLabels[doc.documentType] || doc.documentType}
+                          </strong>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: sc.bg,
+                            color: sc.color
+                          }}>
+                            <StatusIcon size={12} />
+                            {sc.label}
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                          {doc.originalFilename} • {formatFileSize(doc.fileSize)} • Uploaded {new Date(doc.createdAt).toLocaleDateString()}
+                        </p>
+                        {doc.rejectionReason && (
+                          <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#991b1b' }}>
+                            <strong>Reason:</strong> {doc.rejectionReason}
+                          </p>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleViewDocument(docId)}
+                          className="btn btn-outline btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem' }}
+                        >
+                          <ExternalLink size={13} /> View
+                        </button>
+
+                        {doc.status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDocument(docId)}
+                            className="btn btn-outline btn-sm"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#dc2626', borderColor: '#fecaca' }}
+                          >
+                            <Trash2 size={13} /> Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </DashboardLayout>
-  );
+    </div>
+  </DashboardLayout>
+);
 }

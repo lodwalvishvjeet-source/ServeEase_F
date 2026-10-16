@@ -41,6 +41,14 @@ const conversationSchema = new mongoose.Schema(
         type: Date,
         default: null
       }
+    },
+
+    // Canonical pair key to strictly enforce uniqueness at the database level:
+    // Sorted participant ObjectIds + optional booking ID (e.g. "idA:idB" or "idA:idB:bookingId")
+    pairKey: {
+      type: String,
+      default: null,
+      index: true
     }
   },
   {
@@ -60,9 +68,21 @@ const conversationSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for fast lookup of user conversations
+// Pre-save hook: compute canonical pairKey automatically if not explicitly provided
+conversationSchema.pre('save', function () {
+  if (this.participants && this.participants.length >= 2) {
+    const sorted = [...this.participants]
+      .map((p) => (p._id || p).toString())
+      .sort((a, b) => a.localeCompare(b));
+    const bId = this.booking ? (this.booking._id || this.booking).toString() : '';
+    this.pairKey = `${sorted.join(':')}${bId ? ':' + bId : ''}`;
+  }
+});
+
+// Indexes for fast lookup of user conversations and strict DB-level uniqueness
 conversationSchema.index({ participants: 1, updatedAt: -1 });
 conversationSchema.index({ booking: 1 });
+conversationSchema.index({ pairKey: 1 }, { unique: true, sparse: true, name: 'pairKey_1_unique' });
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 

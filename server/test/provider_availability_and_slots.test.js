@@ -93,6 +93,17 @@ const registerProvider = async (data = {}) => {
   };
   const res = await request(app).post('/api/auth/register').send(payload);
   assert.equal(res.status, 201, `Provider register failed: ${JSON.stringify(res.body)}`);
+  if (res.body.user) {
+    await User.findByIdAndUpdate(res.body.user._id, {
+      'providerDetails.isVerified': true,
+      'providerDetails.verificationStatus': 'approved',
+      verificationStatus: 'approved'
+    });
+    res.body.user.providerDetails = res.body.user.providerDetails || {};
+    res.body.user.providerDetails.isVerified = true;
+    res.body.user.providerDetails.verificationStatus = 'approved';
+    res.body.user.verificationStatus = 'approved';
+  }
   return { res, token: res.body.token, user: res.body.user };
 };
 

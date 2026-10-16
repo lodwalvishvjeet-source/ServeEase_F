@@ -300,7 +300,7 @@ test('GET /api/providers returns only eligible providers for requested canonical
         category: 'Electrical repairs',
         serviceArea: 'Gaonbhag',
         isAvailable: true,
-        isVerified: false
+        isVerified: true
       }
     },
     {
@@ -314,7 +314,7 @@ test('GET /api/providers returns only eligible providers for requested canonical
         category: 'Plumbing',
         serviceArea: 'Andheri West',
         isAvailable: true,
-        isVerified: false
+        isVerified: true
       }
     },
     {
@@ -328,7 +328,7 @@ test('GET /api/providers returns only eligible providers for requested canonical
         category: 'Carpentry',
         serviceArea: 'Viman Nagar',
         isAvailable: true,
-        isVerified: false
+        isVerified: true
       }
     },
     {
@@ -342,7 +342,7 @@ test('GET /api/providers returns only eligible providers for requested canonical
         category: 'Painting',
         serviceArea: 'Dharampeth',
         isAvailable: true,
-        isVerified: false
+        isVerified: true
       }
     }
   ]);
@@ -394,7 +394,7 @@ test('Category and availability filters work together with city filtering', asyn
         category: 'Plumbing',
         serviceArea: 'Vishrambag',
         isAvailable: true,
-        isVerified: false
+        isVerified: true
       }
     },
     {
@@ -408,7 +408,7 @@ test('Category and availability filters work together with city filtering', asyn
         category: 'Plumbing',
         serviceArea: 'Miraj',
         isAvailable: false,
-        isVerified: false
+        isVerified: true
       }
     },
     {
@@ -422,7 +422,7 @@ test('Category and availability filters work together with city filtering', asyn
         category: 'Electrical repairs',
         serviceArea: 'Kupwad',
         isAvailable: true,
-        isVerified: false
+        isVerified: true
       }
     }
   ]);

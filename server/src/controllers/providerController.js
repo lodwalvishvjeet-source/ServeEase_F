@@ -249,8 +249,10 @@ export const getProviders = async (req, res, next) => {
       filter['providerDetails.isAvailable'] = true;
     }
 
-    // Optional verified filter
-    if (verified === 'true') {
+    // Verification filter: Only approved/verified professionals appear as bookable by default
+    if (verified === 'false') {
+      filter['providerDetails.isVerified'] = false;
+    } else if (verified !== 'all') {
       filter['providerDetails.isVerified'] = true;
     }
 
