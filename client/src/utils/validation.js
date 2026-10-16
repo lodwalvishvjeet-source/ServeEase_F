@@ -71,3 +71,20 @@ export const validateIndianMobile = (phone) => {
   const normalized = `+91 ${core10}`;
   return { isValid: true, normalized, core10 };
 };
+export const validatePassword = (password) => {
+  if (!password || typeof password !== 'string') {
+    return { isValid: false, error: 'Password is required.' };
+  }
+  const trimmed = password.trim();
+  if (trimmed.length < 8) {
+    return { isValid: false, error: 'Password must be at least 8 characters long.' };
+  }
+  const hasUpper = /[A-Z]/.test(trimmed);
+  const hasLower = /[a-z]/.test(trimmed);
+  const hasNumber = /[0-9]/.test(trimmed);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(trimmed);
+  if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+    return { isValid: false, error: 'Password must include uppercase, lowercase, number, and special character.' };
+  }
+  return { isValid: true };
+};
