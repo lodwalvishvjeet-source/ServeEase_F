@@ -230,6 +230,39 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
+      {/* Pending Email Verification Banner */}
+      {!user?.emailVerified && (
+        <div style={{
+          backgroundColor: '#fffbeb',
+          border: '1px solid #fde68a',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1.25rem',
+          marginBottom: '2rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <AlertCircle size={22} style={{ color: '#d97706', flexShrink: 0 }} />
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, color: '#92400e', fontSize: '0.98rem' }}>
+                Email Verification Required for Bookings
+              </p>
+              <p style={{ margin: 0, color: '#b45309', fontSize: '0.88rem' }}>
+                You can browse local services and technicians, but your email address must be verified before requesting appointments.
+              </p>
+            </div>
+          </div>
+          <Link to="/verify-email" state={{ email: user?.email }}>
+            <Button variant="primary" size="sm" style={{ backgroundColor: '#d97706', borderColor: '#d97706' }}>
+              Verify Email Now
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* 2. Prominent "Explore Services" Search Box */}
       <div className="card" style={{
         padding: '1.75rem',

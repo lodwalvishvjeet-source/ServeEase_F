@@ -66,6 +66,15 @@ export const createBooking = async (req, res, next) => {
       });
     }
 
+    // 2. Customer Email Verification enforcement
+    if (req.user.emailVerified !== true) {
+      return res.status(403).json({
+        success: false,
+        error: 'Please verify your email address before booking an appointment.',
+        requiresEmailVerification: true
+      });
+    }
+
     const {
       providerId,
       serviceName,

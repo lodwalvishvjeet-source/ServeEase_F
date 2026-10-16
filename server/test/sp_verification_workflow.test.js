@@ -48,6 +48,10 @@ const registerCustomer = async (customEmail = null) => {
     city: 'sangli',
     phoneNumber: '+91 9822100001'
   });
+  if (res.body?.user) {
+    await User.findByIdAndUpdate(res.body.user._id, { emailVerified: true });
+    res.body.user.emailVerified = true;
+  }
   return { res, token: res.body.token, user: res.body.user };
 };
 

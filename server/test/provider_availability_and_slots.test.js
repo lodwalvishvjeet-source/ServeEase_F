@@ -64,6 +64,10 @@ const registerCustomer = async (data = {}) => {
   };
   const res = await request(app).post('/api/auth/register').send(payload);
   assert.equal(res.status, 201, `Customer register failed: ${JSON.stringify(res.body)}`);
+  if (res.body?.user) {
+    await User.findByIdAndUpdate(res.body.user._id, { emailVerified: true });
+    res.body.user.emailVerified = true;
+  }
   return { res, token: res.body.token, user: res.body.user };
 };
 

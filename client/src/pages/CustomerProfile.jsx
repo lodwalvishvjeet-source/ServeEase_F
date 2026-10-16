@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   User, 
   Phone, 
@@ -9,7 +10,8 @@ import {
   ArrowLeft, 
   Save, 
   RefreshCw, 
-  Lock 
+  Lock,
+  MailCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -203,10 +205,21 @@ export default function CustomerProfile() {
               {user?.email}
             </p>
 
-            <div style={{ display: 'inline-flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'inline-flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               <span className="badge badge-verified">
                 <CheckCircle2 size={12} /> Active Account
               </span>
+              {user?.emailVerified ? (
+                <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#166534', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={12} /> Email Verified
+                </span>
+              ) : (
+                <Link to="/verify-email" state={{ email: user?.email }} style={{ textDecoration: 'none' }}>
+                  <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertCircle size={12} /> Verify Email
+                  </span>
+                </Link>
+              )}
               <span className="badge badge-primary">
                 Role: Customer
               </span>

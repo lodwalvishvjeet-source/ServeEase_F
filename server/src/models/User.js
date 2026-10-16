@@ -131,6 +131,25 @@ const userSchema = new mongoose.Schema(
         address: { type: String, trim: true, default: '' }
       }
     },
+    // Customer Email Verification
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+    emailVerifiedAt: {
+      type: Date,
+      default: null
+    },
+    emailVerificationOtp: {
+      type: String,
+      select: false,
+      default: null
+    },
+    emailVerificationOtpExpires: {
+      type: Date,
+      select: false,
+      default: null
+    },
     // Password Reset via Email OTP
     resetPasswordOtp: {
       type: String,
@@ -162,6 +181,8 @@ const userSchema = new mongoose.Schema(
         delete ret.resetPasswordOtpExpires;
         delete ret.resetPasswordToken;
         delete ret.resetPasswordTokenExpires;
+        delete ret.emailVerificationOtp;
+        delete ret.emailVerificationOtpExpires;
         delete ret.__v;
         return ret;
       }
@@ -173,6 +194,8 @@ const userSchema = new mongoose.Schema(
         delete ret.resetPasswordOtpExpires;
         delete ret.resetPasswordToken;
         delete ret.resetPasswordTokenExpires;
+        delete ret.emailVerificationOtp;
+        delete ret.emailVerificationOtpExpires;
         delete ret.__v;
         return ret;
       }
@@ -196,6 +219,12 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.methods.toSafeObject = function () {
   const obj = this.toObject ? this.toObject() : { ...this };
   delete obj.passwordHash;
+  delete obj.emailVerificationOtp;
+  delete obj.emailVerificationOtpExpires;
+  delete obj.resetPasswordOtp;
+  delete obj.resetPasswordOtpExpires;
+  delete obj.resetPasswordToken;
+  delete obj.resetPasswordTokenExpires;
   delete obj.__v;
   if (obj.city) {
     obj.cityName = getCityDisplayName(obj.city);

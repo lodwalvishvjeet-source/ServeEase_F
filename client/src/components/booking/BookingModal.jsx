@@ -154,6 +154,12 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
 
   // Submit booking request to backend
   const handleSubmitBooking = async () => {
+    if (user?.role === 'customer' && !user?.emailVerified) {
+      setError('Please verify your email address to book service appointments.');
+      setStep('form');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -275,6 +281,48 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
                 <div>
                   <strong>Technician Currently Offline:</strong> {provider.name} is not accepting new booking requests at this moment.
                 </div>
+              </div>
+            )}
+
+            {user?.role === 'customer' && !user?.emailVerified && (
+              <div className="alert-box" style={{
+                marginBottom: '1.25rem',
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertCircle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                  <div style={{ fontSize: '0.86rem', color: '#92400e' }}>
+                    <strong>Email verification required:</strong> Please verify your email address to complete booking.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    navigate('/verify-email', { state: { email: user?.email } });
+                  }}
+                  style={{
+                    backgroundColor: '#d97706',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Verify Now
+                </button>
               </div>
             )}
 

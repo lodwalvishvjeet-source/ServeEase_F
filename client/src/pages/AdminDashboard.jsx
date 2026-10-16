@@ -14,6 +14,7 @@ import {
   Eye,
   Ban,
   RotateCcw,
+  Trash2,
   Flag,
   FileText,
   Clock,
@@ -168,6 +169,37 @@ export default function AdminDashboard() {
       setActionMessage({ type: 'error', text: err.message || 'Error communicating with server.' });
     } finally {
       setActionSubmitting(false);
+    }
+  };
+
+  // User Deletion Modal State & Handler
+  const [deleteTargetUser, setDeleteTargetUser] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState(null);
+
+  const handleDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    setDeleteSubmitting(true);
+    setDeleteMessage(null);
+    try {
+      const res = await adminApi.deleteUser(deleteTargetUser._id, deleteReason);
+      if (res.success) {
+        setDeleteMessage({ type: 'success', text: res.message });
+        setTimeout(() => {
+          setDeleteTargetUser(null);
+          setDeleteReason('');
+          setDeleteMessage(null);
+          fetchUsers();
+          fetchStatsAndHealth();
+        }, 1200);
+      } else {
+        setDeleteMessage({ type: 'error', text: res.error || 'Failed to delete user account.' });
+      }
+    } catch (err) {
+      setDeleteMessage({ type: 'error', text: err.message || 'Error communicating with server.' });
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -1501,6 +1533,27 @@ export default function AdminDashboard() {
                                 <span style={{ marginLeft: '0.25rem' }}>{isSuspended ? 'Reactivate' : 'Suspend'}</span>
                               </button>
                             )}
+
+                            {!isSelf && isSuspended && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteTargetUser(u);
+                                  setDeleteReason('');
+                                  setDeleteMessage(null);
+                                }}
+                                className="btn btn-sm"
+                                style={{
+                                  backgroundColor: '#fee2e2',
+                                  color: '#991b1b',
+                                  border: '1px solid #f87171'
+                                }}
+                                title="Permanently delete suspended user"
+                              >
+                                <Trash2 size={13} />
+                                <span style={{ marginLeft: '0.25rem' }}>Delete</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2295,6 +2348,81 @@ export default function AdminDashboard() {
                 }}
               >
                 {actionSubmitting ? 'Executing...' : `Confirm ${actionStatusType === 'suspended' ? 'Suspension' : 'Reactivation'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: USER DELETION CONFIRMATION
+          ======================================================== */}
+      {deleteTargetUser && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--color-danger)' }}>
+              <Trash2 size={22} />
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
+                Confirm Permanent User Deletion
+              </h3>
+            </div>
+
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Are you sure you want to permanently delete the account for <strong>{deleteTargetUser.name}</strong> ({deleteTargetUser.email})? This action cannot be undone. All active sessions will be terminated immediately.
+            </p>
+
+            {deleteMessage && (
+              <div className={`alert-box alert-${deleteMessage.type === 'error' ? 'danger' : deleteMessage.type}`} style={{ marginBottom: '1.25rem' }}>
+                <span>{deleteMessage.text}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Reason for Deletion (Recorded in Audit Trail)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Terms violation, requested account removal..."
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="form-control"
+                disabled={deleteSubmitting}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" disabled={deleteSubmitting} onClick={() => setDeleteTargetUser(null)}>
+                Cancel
+              </Button>
+              <button
+                type="button"
+                disabled={deleteSubmitting}
+                onClick={handleDeleteUser}
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: 'var(--color-danger)',
+                  borderColor: 'var(--color-danger)',
+                  color: '#ffffff'
+                }}
+              >
+                {deleteSubmitting ? 'Deleting...' : 'Delete User'}
               </button>
             </div>
           </div>

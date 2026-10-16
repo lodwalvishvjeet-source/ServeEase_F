@@ -60,8 +60,10 @@ export const AuthProvider = ({ children }) => {
       if (!data || !data.success) {
         throw new Error(data?.error || 'Registration failed. Please check form details.');
       }
-      setUser(data.user);
-      return data.user;
+      if (data.user) {
+        setUser(data.user);
+      }
+      return data;
     } catch (err) {
       setAuthError(err.message);
       throw err;
@@ -94,8 +96,23 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
+  /**
+   * Verify email OTP and update active user
+   */
+  const verifyEmailOtp = async (email, otp) => {
+    const data = await authApi.verifyEmailOtp(email, otp);
+    if (!data || !data.success) {
+      throw new Error(data?.error || 'Verification failed. Please check the code.');
+    }
+    if (data.user) {
+      setUser(data.user);
+    }
+    return data;
+  };
+
   const value = {
     user,
+    setUser,
     loading,
     authError,
     isAuthenticated: !!user,
@@ -104,6 +121,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
+    verifyEmailOtp,
     refreshUser: checkAuthStatus
   };
 

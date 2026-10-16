@@ -70,6 +70,11 @@ const registerUser = async (userData) => {
       'providerDetails.verificationStatus': 'approved',
       verificationStatus: 'approved'
     });
+  } else if (res.body?.user && payload.role !== 'admin') {
+    await User.findByIdAndUpdate(res.body.user._id, {
+      emailVerified: true
+    });
+    res.body.user.emailVerified = true;
   }
   const cookies = res.headers['set-cookie'] || [];
   return {

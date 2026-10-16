@@ -132,14 +132,17 @@ export default function Register() {
         })
       };
 
-      const newUser = await register(payload);
+      await register(payload);
 
-      // Redirect to appropriate dashboard upon successful registration
-      if (newUser.role === 'provider') {
-        navigate('/provider/dashboard', { replace: true });
-      } else {
-        navigate('/customer/dashboard', { replace: true });
-      }
+      // Redirect to email OTP verification screen for mandatory verification before account creation
+      navigate('/verify-email', {
+        state: {
+          email: emailCheck.normalized,
+          role,
+          registered: true
+        },
+        replace: true
+      });
     } catch (err) {
       setErrorMessage(err.message || 'Registration failed. Please verify your details.');
     } finally {

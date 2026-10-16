@@ -64,6 +64,11 @@ const registerUser = async (userData) => {
     res.body.user.providerDetails.isVerified = true;
     res.body.user.providerDetails.verificationStatus = 'approved';
     res.body.user.verificationStatus = 'approved';
+  } else if (res.body?.user && userData.role !== 'admin') {
+    await User.findByIdAndUpdate(res.body.user._id, {
+      emailVerified: true
+    });
+    res.body.user.emailVerified = true;
   }
   return { res, token: res.body.token, user: res.body.user };
 };

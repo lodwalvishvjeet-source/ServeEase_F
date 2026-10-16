@@ -460,7 +460,8 @@ test('7. Booking revalidates selected provider and service eligibility', async (
     passwordHash: hash,
     role: 'customer',
     city: 'sangli',
-    phoneNumber: '9876543210'
+    phoneNumber: '9876543210',
+    emailVerified: true
   });
 
   const provider = await User.create({

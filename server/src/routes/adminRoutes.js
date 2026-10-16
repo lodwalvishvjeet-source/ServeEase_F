@@ -5,6 +5,7 @@ import {
   getUsers,
   getUserById,
   updateUserStatus,
+  deleteUser,
   getAdminProviders,
   verifyProvider,
   getAdminBookings,
@@ -33,6 +34,7 @@ router.get('/analytics', getAdminAnalytics);
 router.get('/users', getUsers);
 router.get('/users/:id', getUserById);
 router.patch('/users/:id/status', updateUserStatus);
+router.delete('/users/:id', deleteUser);
 
 // 3. Provider Verification & Credentials
 router.get('/providers', getAdminProviders);

@@ -188,6 +188,20 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email, resetToken, newPassword })
     });
+  },
+
+  verifyEmailOtp: async (email, otp) => {
+    return request('/api/auth/verify-email-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    });
+  },
+
+  resendEmailOtp: async (email) => {
+    return request('/api/auth/resend-verification-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
   }
 };
 
@@ -562,6 +576,13 @@ export const adminApi = {
     return request(`/api/admin/users/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
       body: JSON.stringify(data)
+    });
+  },
+
+  deleteUser: async (id, reason) => {
+    return request(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason })
     });
   },
 

@@ -5,6 +5,7 @@ import Review from '../models/Review.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
 import VerificationDocument from '../models/VerificationDocument.js';
+import { deleteFromGridFS } from '../utils/gridfs.js';
 import { recalculateProviderRating } from './reviewController.js';
 import { getCityDisplayName, normalizeCity } from '../config/cities.js';
 
@@ -595,6 +596,103 @@ export const updateUserStatus = async (req, res, next) => {
       success: true,
       message: `Account for ${targetUser.name} has been ${status === 'suspended' ? 'suspended' : 'reactivated'}.`,
       user: targetUser.toSafeObject(),
+      audit: auditEntry
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * DELETE /api/admin/users/:id
+ * Permanently delete a suspended user account with dependency integrity and audit logging
+ */
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid user identifier.' });
+    }
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    // 1. Prevent admin from deleting their own account
+    if (req.user._id.toString() === targetUser._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Administrators cannot delete their own account.'
+      });
+    }
+
+    // 2. Prevent deletion of the last remaining active administrator
+    if (targetUser.role === 'admin') {
+      const activeAdminCount = await User.countDocuments({ role: 'admin', status: 'active' });
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot delete the platform’s last remaining active administrator account.'
+        });
+      }
+    }
+
+    // 3. Ensure user is suspended before deletion
+    if (targetUser.status !== 'suspended') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only suspended user accounts can be permanently deleted. Please suspend the account first.'
+      });
+    }
+
+    // 4. Handle provider-specific verification documents safely
+    if (targetUser.role === 'provider') {
+      try {
+        const docs = await VerificationDocument.find({ provider: targetUser._id });
+        for (const doc of docs) {
+          if (doc.gridFsFileId) {
+            try {
+              await deleteFromGridFS(doc.gridFsFileId);
+            } catch (gErr) {
+              console.warn(`GridFS file removal notice for doc ${doc._id}:`, gErr.message);
+            }
+          }
+        }
+        await VerificationDocument.deleteMany({ provider: targetUser._id });
+      } catch (docErr) {
+        console.warn('Verification documents cleanup notice:', docErr.message);
+      }
+    }
+
+    // 5. Clean up user notifications (keep bookings, reviews, conversations, and audit records intact for financial and historical audit integrity)
+    await Notification.deleteMany({ recipient: targetUser._id });
+
+    // 6. Delete User document from MongoDB
+    await User.findByIdAndDelete(targetUser._id);
+
+    // 7. Record persistent audit log
+    const auditEntry = await AuditLog.create({
+      admin: req.user._id,
+      adminName: req.user.name,
+      adminEmail: req.user.email,
+      action: 'user_deleted',
+      targetId: targetUser._id,
+      targetType: 'User',
+      reason: (reason || 'User deleted by administrator').trim(),
+      details: {
+        userName: targetUser.name,
+        userEmail: targetUser.email,
+        userRole: targetUser.role,
+        previousStatus: targetUser.status
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `User account for ${targetUser.name} (${targetUser.email}) has been permanently deleted.`,
       audit: auditEntry
     });
   } catch (error) {
