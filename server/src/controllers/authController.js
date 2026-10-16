@@ -2,13 +2,14 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { normalizeCity, SUPPORTED_CITIES } from '../config/cities.js';
 import { validateEmail, validateIndianMobile } from '../utils/validation.js';
+import { getJwtSecret } from '../config/env.js';
 
 /**
  * JWT Token Generator
  * Signs user ID and role into the token with 24h expiration
  */
 export const generateToken = (userId, role) => {
-  const secret = process.env.JWT_SECRET || 'serveease_jwt_super_secret_development_key_2026_change_in_production';
+  const secret = getJwtSecret();
   return jwt.sign(
     { userId, role },
     secret,
@@ -70,9 +71,16 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // 2. Strict public role restriction
+    // 2. Strict public role restriction & privilege escalation guard
     const requestedRole = (role || 'customer').toLowerCase().trim();
-    if (requestedRole === 'admin') {
+    if (
+      requestedRole === 'admin' ||
+      req.body.isAdmin === true ||
+      req.body.isAdmin === 'true' ||
+      req.body.isAdministrator === true ||
+      req.body.isAdministrator === 'true' ||
+      req.body.admin === true
+    ) {
       return res.status(400).json({
         success: false,
         error: 'Administrator accounts cannot be created through public registration. Use the secure bootstrap script.'

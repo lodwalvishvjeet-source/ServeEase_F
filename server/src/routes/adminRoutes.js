@@ -14,14 +14,15 @@ import {
 } from '../controllers/adminController.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorizeRole } from '../middleware/authorizeRole.js';
+import { adminLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
 /**
  * Administrative Protected Routes
- * Every route requires valid JWT authentication AND role === 'admin'
+ * Every route requires valid rate limiting, JWT authentication AND role === 'admin'
  */
-router.use(authenticate, authorizeRole('admin'));
+router.use(adminLimiter, authenticate, authorizeRole('admin'));
 
 // 1. Platform Statistics & Advanced Analytics
 router.get('/stats', getAdminStats);

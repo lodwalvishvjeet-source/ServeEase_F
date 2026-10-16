@@ -18,4 +18,23 @@ export const authLimiter = rateLimit({
   }
 });
 
-export default authLimiter;
+/**
+ * Administrative Endpoints Rate Limiter
+ * 
+ * Protects `/api/admin/*` administrative endpoints from automated query flooding
+ * and resource exhaustion while allowing smooth dashboard operations.
+ */
+export const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  max: process.env.NODE_ENV === 'test' ? 10000 : 300, // Limit each IP to 300 admin requests per 15 minutes
+  skip: () => process.env.NODE_ENV === 'test',
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  message: {
+    success: false,
+    error: 'Too many administrative requests from this IP address. Please try again after 15 minutes.'
+  }
+});
+
+export default { authLimiter, adminLimiter };

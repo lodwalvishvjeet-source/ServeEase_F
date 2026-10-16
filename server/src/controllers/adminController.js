@@ -72,20 +72,81 @@ export const computePlatformAnalytics = async ({ timeframe = '30d', city, catego
     User.countDocuments({ role: 'admin' }),
     Booking.countDocuments({}),
     Booking.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } }
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          revenue: {
+            $sum: {
+              $cond: [
+                { $gt: ['$price', 0] },
+                '$price',
+                {
+                  $cond: [
+                    { $gt: ['$totalAmount', 0] },
+                    '$totalAmount',
+                    0
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
     ]),
     Booking.aggregate([
       { $match: { status: { $in: ['completed', 'accepted'] } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: {
+              $cond: [
+                { $gt: ['$price', 0] },
+                '$price',
+                {
+                  $cond: [
+                    { $gt: ['$totalAmount', 0] },
+                    '$totalAmount',
+                    0
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
     ]),
     Booking.aggregate([
       { $match: { category: { $exists: true, $ne: '' } } },
-      { $group: {
-        _id: '$category',
-        bookingsCount: { $sum: 1 },
-        totalRevenue: { $sum: '$totalAmount' },
-        completedCount: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
-      } },
+      {
+        $group: {
+          _id: '$category',
+          bookingsCount: { $sum: 1 },
+          totalRevenue: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['completed', 'accepted']] },
+                {
+                  $cond: [
+                    { $gt: ['$price', 0] },
+                    '$price',
+                    {
+                      $cond: [
+                        { $gt: ['$totalAmount', 0] },
+                        '$totalAmount',
+                        0
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            }
+          },
+          completedCount: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
+        }
+      },
       { $sort: { bookingsCount: -1 } },
       { $limit: 8 }
     ]),
@@ -112,25 +173,69 @@ export const computePlatformAnalytics = async ({ timeframe = '30d', city, catego
     ]),
     Booking.aggregate([
       { $match: { city: { $exists: true, $ne: '' } } },
-      { $group: {
-        _id: '$city',
-        totalBookings: { $sum: 1 },
-        completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
-        revenue: { $sum: '$totalAmount' }
-      } },
+      {
+        $group: {
+          _id: '$city',
+          totalBookings: { $sum: 1 },
+          completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+          revenue: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['completed', 'accepted']] },
+                {
+                  $cond: [
+                    { $gt: ['$price', 0] },
+                    '$price',
+                    {
+                      $cond: [
+                        { $gt: ['$totalAmount', 0] },
+                        '$totalAmount',
+                        0
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            }
+          }
+        }
+      },
       { $sort: { totalBookings: -1 } }
     ]),
     Booking.aggregate([
       ...(Object.keys(trendMatch).length > 0 ? [{ $match: trendMatch }] : []),
-      { $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-        total: { $sum: 1 },
-        completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
-        accepted: { $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] } },
-        pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
-        cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
-        revenue: { $sum: '$totalAmount' }
-      } },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          total: { $sum: 1 },
+          completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+          accepted: { $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] } },
+          pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+          revenue: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['completed', 'accepted']] },
+                {
+                  $cond: [
+                    { $gt: ['$price', 0] },
+                    '$price',
+                    {
+                      $cond: [
+                        { $gt: ['$totalAmount', 0] },
+                        '$totalAmount',
+                        0
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            }
+          }
+        }
+      },
       { $sort: { _id: 1 } }
     ]),
     Review.countDocuments({}),
@@ -165,11 +270,22 @@ export const computePlatformAnalytics = async ({ timeframe = '30d', city, catego
     });
   });
 
-  const cityDistribution = cityUsersAgg.map(u => {
-    const bStats = bookingCityMap.get(u._id) || { totalBookings: 0, completedBookings: 0, revenue: 0 };
+  const userCityMap = new Map();
+  cityUsersAgg.forEach(u => {
+    userCityMap.set(u._id, u);
+  });
+
+  const allCityKeys = Array.from(new Set([
+    ...cityUsersAgg.map(u => u._id),
+    ...cityBookingsAgg.map(b => b._id)
+  ])).filter(Boolean);
+
+  const cityDistribution = allCityKeys.map(cityKey => {
+    const u = userCityMap.get(cityKey) || { totalUsers: 0, customers: 0, providers: 0, verifiedProviders: 0 };
+    const bStats = bookingCityMap.get(cityKey) || { totalBookings: 0, completedBookings: 0, revenue: 0 };
     return {
-      city: u._id,
-      cityName: getCityDisplayName(u._id),
+      city: cityKey,
+      cityName: getCityDisplayName(cityKey),
       totalUsers: u.totalUsers,
       customers: u.customers,
       providers: u.providers,
@@ -178,7 +294,7 @@ export const computePlatformAnalytics = async ({ timeframe = '30d', city, catego
       completedBookings: bStats.completedBookings,
       revenue: bStats.revenue
     };
-  });
+  }).sort((a, b) => (b.totalUsers - a.totalUsers) || (b.totalBookings - a.totalBookings));
 
   // Calculate completion percentage
   const finalizedCount = bookingsByStatus.completed + bookingsByStatus.cancelled + bookingsByStatus.rejected;

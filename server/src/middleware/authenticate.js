@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { getJwtSecret } from '../config/env.js';
 
 /**
  * Authentication Middleware
@@ -35,7 +36,7 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    const secret = process.env.JWT_SECRET || 'serveease_jwt_super_secret_development_key_2026_change_in_production';
+    const secret = getJwtSecret();
     
     // Verify token signature & expiry
     let decoded;

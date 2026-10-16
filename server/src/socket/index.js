@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
+import { getJwtSecret } from '../config/env.js';
 
 let ioInstance = null;
 
@@ -38,9 +39,7 @@ export const initSocket = (httpServer, allowedOrigins = []) => {
         return next(new Error('Authentication required: No token provided'));
       }
 
-      const secret =
-        process.env.JWT_SECRET ||
-        'dev_fallback_secret_serveease_college_project_change_in_production';
+      const secret = getJwtSecret();
 
       const decoded = jwt.verify(token, secret);
       const userId = decoded.userId || decoded.id;
