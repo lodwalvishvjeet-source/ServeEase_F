@@ -415,6 +415,19 @@ export const bookingApi = {
       method: 'PATCH',
       body: JSON.stringify(location)
     });
+  },
+
+  getArrivalOtp: async (id) => {
+    return request(`/api/bookings/${encodeURIComponent(id)}/arrival-otp`, {
+      method: 'GET'
+    });
+  },
+
+  verifyArrival: async (id, otp) => {
+    return request(`/api/bookings/${encodeURIComponent(id)}/verify-arrival`, {
+      method: 'POST',
+      body: JSON.stringify({ otp })
+    });
   }
 };
 

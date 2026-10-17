@@ -7,6 +7,7 @@ import { getIO } from '../socket/index.js';
 import { normalizeCity, isValidCity, getCityDisplayName, SUPPORTED_CITIES } from '../config/cities.js';
 import { validateBookingSlot, getKolkataNow } from '../utils/dateTime.js';
 import { checkProviderBookingEligibility } from '../utils/providerEligibility.js';
+import { generateArrivalOtpPayload, deriveArrivalOtp, hashArrivalOtp } from '../utils/arrivalOtp.js';
 
 /**
  * Helper: Sanitized population options for Customer and Provider references
@@ -318,12 +319,23 @@ export const getCustomerBookings = async (req, res, next) => {
 
     const bookings = await Booking.find(filter)
       .sort({ createdAt: -1 })
+      .select('+arrivalOtpSeed')
       .populate('provider', PROVIDER_SAFE_FIELDS);
+
+    const sanitized = bookings.map(b => {
+      const obj = b.toObject();
+      if (b.status === 'accepted' && !b.arrivalOtpVerified && b.arrivalOtpExpires && new Date() <= b.arrivalOtpExpires && b.arrivalOtpSeed) {
+        obj.arrivalOtp = deriveArrivalOtp(b._id, b.arrivalOtpSeed);
+      }
+      delete obj.arrivalOtpSeed;
+      delete obj.arrivalOtpHash;
+      return obj;
+    });
 
     return res.status(200).json({
       success: true,
-      count: bookings.length,
-      bookings
+      count: sanitized.length,
+      bookings: sanitized
     });
   } catch (error) {
     return next(error);
@@ -407,9 +419,22 @@ export const getBookingById = async (req, res, next) => {
       });
     }
 
+    const bookingObj = booking.toObject();
+
+    // Securely derive and expose arrivalOtp ONLY to the customer on active accepted bookings
+    if (isCustomer && booking.status === 'accepted' && !booking.arrivalOtpVerified) {
+      const raw = await Booking.findById(id).select('+arrivalOtpSeed');
+      if (raw?.arrivalOtpSeed && raw.arrivalOtpExpires && new Date() <= raw.arrivalOtpExpires) {
+        bookingObj.arrivalOtp = deriveArrivalOtp(booking._id, raw.arrivalOtpSeed);
+      }
+    }
+
+    delete bookingObj.arrivalOtpSeed;
+    delete bookingObj.arrivalOtpHash;
+
     return res.status(200).json({
       success: true,
-      booking
+      booking: bookingObj
     });
   } catch (error) {
     return next(error);
@@ -599,6 +624,9 @@ export const acceptBooking = async (req, res, next) => {
       });
     }
 
+    // Generate booking-specific arrival OTP (only hash and expiry stored for verification; plain OTP never exposed to SP)
+    const { seed, hash, expires } = generateArrivalOtpPayload(booking._id);
+
     // Atomic update
     const updated = await Booking.findOneAndUpdate(
       {
@@ -607,13 +635,21 @@ export const acceptBooking = async (req, res, next) => {
         status: 'pending'
       },
       {
-        $set: { status: 'accepted' },
+        $set: {
+          status: 'accepted',
+          arrivalOtpHash: hash,
+          arrivalOtpExpires: expires,
+          arrivalOtpAttempts: 0,
+          arrivalOtpVerified: false,
+          arrivedAt: null,
+          arrivalOtpSeed: seed
+        },
         $push: {
           statusHistory: {
             status: 'accepted',
             changedAt: new Date(),
             changedBy: req.user._id,
-            note: 'Booking accepted by technician'
+            note: 'Booking accepted by technician. Arrival OTP generated for customer.'
           }
         }
       },
@@ -1049,4 +1085,246 @@ export const updateBookingLocation = async (req, res, next) => {
     return next(error);
   }
 };
+
+/**
+ * GET /api/bookings/:id/arrival-otp
+ * Retrieve arrival OTP for an accepted booking (Customer only)
+ */
+export const getArrivalOtp = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid booking identifier format.' });
+    }
+
+    const booking = await Booking.findById(id).select('+arrivalOtpSeed');
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking not found.' });
+    }
+
+    // Strictly ensure only the customer who booked can view the arrival OTP
+    if (booking.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'You are not authorized to view the arrival code for this booking.'
+      });
+    }
+
+    if (booking.status !== 'accepted') {
+      return res.status(400).json({
+        success: false,
+        error: `Arrival code is only available for confirmed appointments. Current status is "${booking.status}".`
+      });
+    }
+
+    if (booking.arrivalOtpVerified) {
+      return res.status(400).json({
+        success: false,
+        error: 'Technician arrival has already been verified for this booking.'
+      });
+    }
+
+    if (booking.arrivalOtpExpires && new Date() > booking.arrivalOtpExpires) {
+      return res.status(400).json({
+        success: false,
+        error: 'Arrival code has expired.'
+      });
+    }
+
+    const arrivalOtp = deriveArrivalOtp(booking._id, booking.arrivalOtpSeed);
+    if (!arrivalOtp) {
+      return res.status(404).json({
+        success: false,
+        error: 'Arrival code is not available for this booking.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      arrivalOtp,
+      expiresAt: booking.arrivalOtpExpires
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * POST /api/bookings/:id/verify-arrival
+ * Verify Service Provider arrival at customer location using customer-provided OTP (Assigned Provider only)
+ */
+export const verifyArrival = async (req, res, next) => {
+  try {
+    // 1. Role enforcement
+    if (req.user.role !== 'provider') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only service providers can verify arrival.'
+      });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid booking identifier format.'
+      });
+    }
+
+    // 2. Validate input OTP
+    const rawOtp = req.body.otp !== undefined ? req.body.otp : req.body.arrivalOtp;
+    if (!rawOtp || (typeof rawOtp !== 'string' && typeof rawOtp !== 'number')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide the 6-digit arrival verification code provided by the customer.'
+      });
+    }
+
+    const cleanOtp = String(rawOtp).trim();
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Arrival verification code must be exactly 6 digits.'
+      });
+    }
+
+    // 3. Find booking with hash and attempts
+    const booking = await Booking.findById(id).select('+arrivalOtpHash');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Booking not found.'
+      });
+    }
+
+    // 4. Strictly verify assigned provider ownership
+    if (booking.provider.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'You are not the technician assigned to this booking.'
+      });
+    }
+
+    // 5. Booking lifecycle: Must be in 'accepted' state
+    if (booking.status !== 'accepted') {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot verify arrival for booking with status "${booking.status}". Only accepted appointments can have arrival verified.`
+      });
+    }
+
+    // 6. Already verified check
+    if (booking.arrivalOtpVerified === true || booking.arrivedAt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Arrival has already been verified for this booking.'
+      });
+    }
+
+    // 7. Attempt limit check (Max 5 attempts)
+    const MAX_ATTEMPTS = 5;
+    if ((booking.arrivalOtpAttempts || 0) >= MAX_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        error: 'Maximum verification attempts exceeded for this booking. Please contact customer or support.'
+      });
+    }
+
+    // 8. Expiry check
+    if (booking.arrivalOtpExpires && new Date() > booking.arrivalOtpExpires) {
+      return res.status(400).json({
+        success: false,
+        error: 'Arrival verification code has expired.'
+      });
+    }
+
+    // 9. OTP Hash comparison
+    const candidateHash = hashArrivalOtp(cleanOtp);
+    if (!booking.arrivalOtpHash || candidateHash !== booking.arrivalOtpHash) {
+      // Atomically increment failed attempts
+      const updatedFail = await Booking.findByIdAndUpdate(
+        id,
+        { $inc: { arrivalOtpAttempts: 1 } },
+        { returnDocument: 'after' }
+      );
+      const remainingAttempts = Math.max(0, MAX_ATTEMPTS - (updatedFail?.arrivalOtpAttempts || (booking.arrivalOtpAttempts + 1)));
+      return res.status(400).json({
+        success: false,
+        error: remainingAttempts > 0
+          ? `Invalid arrival verification code. ${remainingAttempts} attempt(s) remaining.`
+          : 'Invalid arrival verification code. Maximum attempts exceeded.'
+      });
+    }
+
+    // 10. Atomic verification update to prevent race conditions / duplicate verification
+    const arrivedTimestamp = new Date();
+    const updated = await Booking.findOneAndUpdate(
+      {
+        _id: id,
+        provider: req.user._id,
+        status: 'accepted',
+        arrivalOtpVerified: { $ne: true },
+        arrivalOtpHash: candidateHash
+      },
+      {
+        $set: {
+          arrivalOtpVerified: true,
+          arrivedAt: arrivedTimestamp,
+          arrivalOtpHash: null, // Invalidate OTP hash on consumption
+          arrivalOtpSeed: null  // Invalidate seed so it can never be reused or re-derived
+        },
+        $inc: { arrivalOtpAttempts: 1 },
+        $push: {
+          statusHistory: {
+            status: 'accepted',
+            changedAt: arrivedTimestamp,
+            changedBy: req.user._id,
+            note: 'Technician arrival confirmed on-site via customer OTP'
+          }
+        }
+      },
+      { returnDocument: 'after' }
+    )
+      .populate('customer', CUSTOMER_SAFE_FIELDS)
+      .populate('provider', PROVIDER_SAFE_FIELDS);
+
+    if (!updated) {
+      return res.status(400).json({
+        success: false,
+        error: 'Arrival has already been verified or booking status has changed.'
+      });
+    }
+
+    // Create notification for customer
+    try {
+      await Notification.create({
+        recipient: updated.customer._id || updated.customer,
+        type: 'arrival_verified',
+        title: 'Technician Arrival Confirmed',
+        message: `${req.user.name} has arrived at your location and confirmed arrival.`,
+        booking: updated._id,
+        data: {
+          bookingId: updated._id,
+          providerName: req.user.name,
+          arrivedAt: arrivedTimestamp
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Could not persist arrival_verified notification:', notifErr.message);
+    }
+
+    // Broadcast status update via Socket.IO
+    await broadcastBookingStatusUpdate(updated);
+
+    // Return response without any OTP
+    return res.status(200).json({
+      success: true,
+      message: 'Technician arrival verified successfully.',
+      booking: updated
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 

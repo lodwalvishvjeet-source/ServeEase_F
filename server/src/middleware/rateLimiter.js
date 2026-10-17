@@ -55,4 +55,22 @@ export const otpLimiter = rateLimit({
   }
 });
 
-export default { authLimiter, adminLimiter, otpLimiter };
+/**
+ * Arrival Verification OTP Rate Limiter
+ * 
+ * Protects arrival OTP verification endpoints from brute-force automated guessing.
+ */
+export const arrivalOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  max: process.env.NODE_ENV === 'test' ? 10000 : 15, // Limit each IP to 15 verification attempts per 15 minutes
+  skip: () => process.env.NODE_ENV === 'test',
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  message: {
+    success: false,
+    error: 'Too many arrival verification attempts from this IP address. Please wait a few minutes before trying again.'
+  }
+});
+
+export default { authLimiter, adminLimiter, otpLimiter, arrivalOtpLimiter };

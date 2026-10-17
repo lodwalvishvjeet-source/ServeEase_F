@@ -9,10 +9,13 @@ import {
   rejectBooking,
   startBooking,
   completeBooking,
-  updateBookingLocation
+  updateBookingLocation,
+  getArrivalOtp,
+  verifyArrival
 } from '../controllers/bookingController.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorizeRole } from '../middleware/authorizeRole.js';
+import { arrivalOtpLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -50,5 +53,12 @@ router.patch('/:id/complete', authorizeRole('provider'), completeBooking);
 
 // 9. Update coordinates for an authorized booking (Customer or assigned Provider)
 router.patch('/:id/location', updateBookingLocation);
+
+// 10. Get arrival OTP for confirmed booking (Customer only)
+router.get('/:id/arrival-otp', authorizeRole('customer'), getArrivalOtp);
+
+// 11. Verify arrival on-site via customer OTP (Assigned Provider only)
+router.post('/:id/verify-arrival', authorizeRole('provider'), arrivalOtpLimiter, verifyArrival);
+router.patch('/:id/verify-arrival', authorizeRole('provider'), arrivalOtpLimiter, verifyArrival);
 
 export default router;

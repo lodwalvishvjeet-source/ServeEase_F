@@ -74,7 +74,7 @@ export default function VerifyOtp() {
       setIsResending(true);
       const res = await authApi.forgotPassword(emailCheck.normalized);
       if (res && res.success) {
-        setStatusMsg(res.message || 'A new verification code has been sent to your email.');
+        setStatusMsg(res.message || 'If an account exists with that email, a verification code has been sent.');
       } else {
         setFormError(res?.error || 'Failed to resend code. Please try again.');
       }
@@ -95,10 +95,11 @@ export default function VerifyOtp() {
           </span>
           <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>Enter Verification Code</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            We sent a 6-digit code to{' '}
+            If an account exists for{' '}
             <strong style={{ color: 'var(--color-text-title)' }}>
               {email || 'your email address'}
             </strong>
+            , a 6-digit verification code was sent to your inbox.
           </p>
         </div>
 

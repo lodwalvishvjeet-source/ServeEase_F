@@ -106,8 +106,18 @@ export const sendEmail = async ({ to, subject, text, html }) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
+    if (info?.rejected?.length > 0 && (!info?.accepted || info.accepted.length === 0)) {
+      console.error('❌ [Email Service]: SMTP rejected recipient address');
+      const deliveryError = new Error('Failed to deliver verification email via SMTP server: recipient address rejected.');
+      deliveryError.code = 'EMAIL_RECIPIENT_REJECTED';
+      deliveryError.statusCode = 503;
+      throw deliveryError;
+    }
     return info;
   } catch (err) {
+    if (err.code === 'EMAIL_RECIPIENT_REJECTED') {
+      throw err;
+    }
     console.error('❌ [Email Service]: SMTP delivery failed:', err.message);
     const deliveryError = new Error('Failed to deliver verification email via SMTP server.');
     deliveryError.code = 'EMAIL_DELIVERY_FAILED';

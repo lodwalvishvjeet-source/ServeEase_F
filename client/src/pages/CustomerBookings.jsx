@@ -558,6 +558,82 @@ export default function CustomerBookings() {
                     </div>
                   )}
 
+                  {/* Technician Arrival Verification OTP Display (Customer Only) */}
+                  {b.status === 'accepted' && b.arrivalOtp && !b.arrivalOtpVerified && !b.arrivedAt && (
+                    <div
+                      id={`arrival-otp-card-${b._id}`}
+                      style={{
+                        background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                        padding: '1rem 1.25rem',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1.5px solid #a7f3d0',
+                        marginBottom: '1rem',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.08)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#065f46', fontWeight: 700, fontSize: '0.92rem' }}>
+                          <ShieldCheck size={18} style={{ color: '#059669' }} />
+                          <span>Technician Arrival Verification Code</span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#047857', backgroundColor: '#d1fae5', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontWeight: 600 }}>
+                          Share only after arrival
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+                        <div
+                          id={`arrival-otp-code-${b._id}`}
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '1.65rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.35em',
+                            color: '#064e3b',
+                            backgroundColor: '#ffffff',
+                            padding: '0.4rem 1.1rem',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px dashed #059669',
+                            display: 'inline-block'
+                          }}
+                        >
+                          {b.arrivalOtp}
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: '#047857', maxWidth: '440px', lineHeight: 1.45 }}>
+                          Please share this 6-digit code with the technician <strong>only after they arrive</strong> at your location to confirm arrival.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Technician Arrival Confirmed Banner */}
+                  {(b.arrivalOtpVerified || b.arrivedAt) && b.status !== 'completed' && (
+                    <div
+                      id={`arrival-verified-banner-${b._id}`}
+                      style={{
+                        backgroundColor: '#f0fdf4',
+                        padding: '0.75rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.88rem',
+                        color: '#166534',
+                        marginBottom: '1rem',
+                        border: '1px solid #bbf7d0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem'
+                      }}
+                    >
+                      <CheckCircle2 size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <div>
+                        <strong>Technician Arrival Verified</strong>
+                        {b.arrivedAt && (
+                          <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#15803d' }}>
+                            — technician confirmed arrival on {new Date(b.arrivedAt).toLocaleDateString()} at {new Date(b.arrivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Service Completed Banner */}
                   {b.status === 'completed' && (
                     <div

@@ -31,7 +31,7 @@ export default function ForgotPassword() {
       setIsLoading(true);
       const res = await authApi.forgotPassword(emailCheck.normalized);
       if (res && res.success) {
-        setSuccessMsg(res.message || 'Verification code sent to your email.');
+        setSuccessMsg(res.message || 'If an account exists with that email, a verification code has been sent.');
         setTimeout(() => {
           navigate('/verify-otp', { state: { email: emailCheck.normalized } });
         }, 1500);

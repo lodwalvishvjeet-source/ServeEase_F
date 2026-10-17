@@ -160,6 +160,40 @@ const bookingSchema = new mongoose.Schema(
       default: null
     },
 
+    // Arrival verification OTP fields (booking-specific, cryptographically hashed)
+    arrivalOtpHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    arrivalOtpExpires: {
+      type: Date,
+      default: null
+    },
+
+    arrivalOtpAttempts: {
+      type: Number,
+      default: 0
+    },
+
+    arrivalOtpVerified: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+
+    arrivedAt: {
+      type: Date,
+      default: null
+    },
+
+    arrivalOtpSeed: {
+      type: String,
+      default: null,
+      select: false
+    },
+
     // Audit trail of status changes
     statusHistory: [
       {
@@ -187,6 +221,8 @@ const bookingSchema = new mongoose.Schema(
     toJSON: {
       transform: function (doc, ret) {
         delete ret.__v;
+        delete ret.arrivalOtpHash;
+        delete ret.arrivalOtpSeed;
         if (ret.city) {
           ret.cityName = getCityDisplayName(ret.city);
         }
@@ -196,6 +232,8 @@ const bookingSchema = new mongoose.Schema(
     toObject: {
       transform: function (doc, ret) {
         delete ret.__v;
+        delete ret.arrivalOtpHash;
+        delete ret.arrivalOtpSeed;
         if (ret.city) {
           ret.cityName = getCityDisplayName(ret.city);
         }

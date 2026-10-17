@@ -13,7 +13,8 @@ import {
   Check,
   DollarSign,
   MessageSquare,
-  Play
+  Play,
+  ShieldCheck
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -40,6 +41,11 @@ export default function ProviderBookings() {
   // Start service action state
   const [startingId, setStartingId] = useState(null);
   const [isStarting, setIsStarting] = useState(false);
+
+  // Arrival OTP verification state
+  const [arrivalOtps, setArrivalOtps] = useState({});
+  const [verifyingArrivalId, setVerifyingArrivalId] = useState(null);
+  const [arrivalErrors, setArrivalErrors] = useState({});
 
   const city = user?.city ? getCityDisplayName(user.city) : 'Sangli';
 
@@ -80,6 +86,39 @@ export default function ProviderBookings() {
       socket.off('booking_status_updated', handleStatusUpdate);
     };
   }, []);
+
+  // Handle Verify Customer Arrival OTP
+  const handleVerifyArrival = async (bookingId) => {
+    const rawCode = arrivalOtps[bookingId] || '';
+    const cleanCode = String(rawCode).trim();
+    if (!cleanCode) {
+      setArrivalErrors(prev => ({ ...prev, [bookingId]: 'Please enter the 6-digit OTP provided by the customer.' }));
+      return;
+    }
+    if (!/^\d{6}$/.test(cleanCode)) {
+      setArrivalErrors(prev => ({ ...prev, [bookingId]: 'Verification code must be exactly 6 digits.' }));
+      return;
+    }
+
+    setVerifyingArrivalId(bookingId);
+    setArrivalErrors(prev => ({ ...prev, [bookingId]: null }));
+    setActionNotice(null);
+
+    try {
+      const res = await bookingApi.verifyArrival(bookingId, cleanCode);
+      if (res.success && res.booking) {
+        setBookings(prev => prev.map(b => (b._id === bookingId ? res.booking : b)));
+        setActionNotice({ type: 'success', message: 'Technician arrival verified successfully! You can now begin work.' });
+        setArrivalOtps(prev => ({ ...prev, [bookingId]: '' }));
+      } else {
+        setArrivalErrors(prev => ({ ...prev, [bookingId]: res.error || 'Failed to verify arrival code.' }));
+      }
+    } catch (err) {
+      setArrivalErrors(prev => ({ ...prev, [bookingId]: err.message || 'Error executing arrival verification.' }));
+    } finally {
+      setVerifyingArrivalId(null);
+    }
+  };
 
   // Handle Start Service
   const handleStartService = async (id) => {
@@ -393,6 +432,110 @@ export default function ProviderBookings() {
                       border: '1px solid #e2e8f0'
                     }}>
                       <strong>Customer Instructions:</strong> "{b.description}"
+                    </div>
+                  )}
+
+                  {/* On-Site Arrival Verification Box (Assigned SP Only) */}
+                  {isAccepted && !b.arrivalOtpVerified && !b.arrivedAt && (
+                    <div
+                      id={`arrival-verification-box-${b._id}`}
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        padding: '0.85rem 1.15rem',
+                        borderRadius: 'var(--radius-md)',
+                        marginBottom: '1rem',
+                        border: '1px solid #e2e8f0'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#1e293b', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                        <ShieldCheck size={17} style={{ color: '#0284c7' }} />
+                        <span>Confirm On-Site Arrival</span>
+                      </div>
+                      <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                        Ask the customer for their 6-digit Arrival Verification OTP upon reaching their service location.
+                      </p>
+
+                      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          id={`arrival-otp-input-${b._id}`}
+                          maxLength={6}
+                          placeholder="Enter 6-digit OTP"
+                          value={arrivalOtps[b._id] || ''}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setArrivalOtps(prev => ({ ...prev, [b._id]: val }));
+                            setArrivalErrors(prev => ({ ...prev, [b._id]: null }));
+                          }}
+                          style={{
+                            width: '160px',
+                            padding: '0.45rem 0.75rem',
+                            fontSize: '0.95rem',
+                            fontFamily: 'monospace',
+                            letterSpacing: '2px',
+                            fontWeight: 700,
+                            borderRadius: 'var(--radius-md)',
+                            border: arrivalErrors[b._id] ? '1px solid var(--color-danger)' : '1px solid var(--color-border)',
+                            backgroundColor: '#ffffff'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          id={`verify-arrival-btn-${b._id}`}
+                          disabled={verifyingArrivalId === b._id}
+                          onClick={() => handleVerifyArrival(b._id)}
+                          className="btn btn-primary btn-sm"
+                          style={{
+                            backgroundColor: '#0284c7',
+                            borderColor: '#0284c7',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          {verifyingArrivalId === b._id ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" /> Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={14} /> Verify Arrival
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {arrivalErrors[b._id] && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: 'var(--color-danger)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <AlertCircle size={14} />
+                          <span>{arrivalErrors[b._id]}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Arrival Verified Banner */}
+                  {isAccepted && (b.arrivalOtpVerified || b.arrivedAt) && (
+                    <div
+                      id={`arrival-verified-banner-${b._id}`}
+                      style={{
+                        backgroundColor: '#f0fdf4',
+                        padding: '0.65rem 0.95rem',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.85rem',
+                        color: '#166534',
+                        marginBottom: '1rem',
+                        border: '1px solid #bbf7d0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <span>
+                        <strong>Arrival Verified</strong>
+                        {b.arrivedAt && ` on ${new Date(b.arrivedAt).toLocaleDateString()} at ${new Date(b.arrivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      </span>
                     </div>
                   )}
 
