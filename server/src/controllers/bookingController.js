@@ -329,6 +329,12 @@ export const getCustomerBookings = async (req, res, next) => {
       }
       delete obj.arrivalOtpSeed;
       delete obj.arrivalOtpHash;
+      if (['completed', 'cancelled', 'rejected'].includes(obj.status)) {
+        obj.location = null;
+        if (obj.provider?.providerDetails?.location) {
+          obj.provider.providerDetails.location = null;
+        }
+      }
       return obj;
     });
 
@@ -370,10 +376,18 @@ export const getProviderBookings = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .populate('customer', CUSTOMER_SAFE_FIELDS);
 
+    const sanitized = bookings.map(b => {
+      const obj = b.toObject();
+      if (['completed', 'cancelled', 'rejected'].includes(obj.status)) {
+        obj.location = null;
+      }
+      return obj;
+    });
+
     return res.status(200).json({
       success: true,
-      count: bookings.length,
-      bookings
+      count: sanitized.length,
+      bookings: sanitized
     });
   } catch (error) {
     return next(error);
@@ -431,6 +445,14 @@ export const getBookingById = async (req, res, next) => {
 
     delete bookingObj.arrivalOtpSeed;
     delete bookingObj.arrivalOtpHash;
+
+    // Immediately revoke coordinate access for completed, cancelled, or rejected bookings
+    if (['completed', 'cancelled', 'rejected'].includes(bookingObj.status)) {
+      bookingObj.location = null;
+      if (bookingObj.provider?.providerDetails?.location) {
+        bookingObj.provider.providerDetails.location = null;
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -1040,6 +1062,14 @@ export const updateBookingLocation = async (req, res, next) => {
       });
     }
 
+    // Prohibit updating coordinates once booking has concluded or become inactive
+    if (['completed', 'cancelled', 'rejected'].includes(booking.status)) {
+      return res.status(409).json({
+        success: false,
+        error: `Cannot update location for a ${booking.status} booking.`
+      });
+    }
+
     const reqLoc = (req.body.location && typeof req.body.location === 'object') ? req.body.location : {};
     const reqLat = req.body.latitude !== undefined ? req.body.latitude : reqLoc.latitude;
     const reqLng = req.body.longitude !== undefined ? req.body.longitude : reqLoc.longitude;
@@ -1080,6 +1110,139 @@ export const updateBookingLocation = async (req, res, next) => {
       success: true,
       message: 'Booking coordinates updated successfully.',
       booking: populated
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/bookings/:id/location
+ * Secure booking-scoped endpoint to retrieve customer and provider locations
+ * Enforces strict authorization and lifecycle access rules:
+ * - Caller must be authenticated and either customer or assigned provider for this booking (or admin).
+ * - Location sharing is ONLY active during 'accepted' or 'in_progress' status.
+ * - Access is immediately revoked upon 'completed', 'cancelled', or 'rejected'.
+ * - Access is not yet unlocked during 'pending' (waiting for technician acceptance).
+ */
+export const getBookingLocation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid booking identifier format.'
+      });
+    }
+
+    const booking = await Booking.findById(id)
+      .populate('customer', CUSTOMER_SAFE_FIELDS)
+      .populate('provider', PROVIDER_SAFE_FIELDS);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Booking record not found.'
+      });
+    }
+
+    const userId = req.user._id.toString();
+    const isCustomer = booking.customer?._id?.toString() === userId;
+    const isProvider = booking.provider?._id?.toString() === userId;
+    const isAdmin = req.user.role === 'admin';
+
+    // 1. Strict authorization: Unrelated customers/providers receive 403 Forbidden
+    if (!isCustomer && !isProvider && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'You are not authorized to access location data for this booking.'
+      });
+    }
+
+    // 2. Lifecycle status enforcement: revoke immediately upon completion/cancellation/rejection
+    if (booking.status === 'completed') {
+      return res.status(409).json({
+        success: false,
+        revoked: true,
+        status: 'completed',
+        error: 'Service completed. Location sharing access has been revoked.'
+      });
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.status(409).json({
+        success: false,
+        revoked: true,
+        status: 'cancelled',
+        error: 'Booking was cancelled. Location sharing is inactive.'
+      });
+    }
+
+    if (booking.status === 'rejected') {
+      return res.status(409).json({
+        success: false,
+        revoked: true,
+        status: 'rejected',
+        error: 'Booking request was declined. Location sharing is inactive.'
+      });
+    }
+
+    if (booking.status === 'pending') {
+      return res.status(409).json({
+        success: false,
+        pending: true,
+        status: 'pending',
+        error: 'Location sharing becomes available once the technician confirms the booking.'
+      });
+    }
+
+    // 3. Only 'accepted' and 'in_progress' are eligible for active location sharing
+    if (booking.status !== 'accepted' && booking.status !== 'in_progress') {
+      return res.status(409).json({
+        success: false,
+        error: `Location sharing is not available for booking status "${booking.status}".`
+      });
+    }
+
+    // 4. Build sanitized response payload
+    const providerDetails = booking.provider?.providerDetails;
+    const providerSavedLocation = providerDetails?.location;
+    const hasProviderCoords = providerSavedLocation &&
+      providerSavedLocation.latitude !== null &&
+      providerSavedLocation.latitude !== undefined &&
+      providerSavedLocation.longitude !== null &&
+      providerSavedLocation.longitude !== undefined;
+
+    const hasCustomerCoords = booking.location &&
+      booking.location.latitude !== null &&
+      booking.location.latitude !== undefined &&
+      booking.location.longitude !== null &&
+      booking.location.longitude !== undefined;
+
+    return res.status(200).json({
+      success: true,
+      bookingId: booking._id,
+      status: booking.status,
+      serviceName: booking.serviceName,
+      bookingDate: booking.bookingDate,
+      bookingTime: booking.bookingTime,
+      city: booking.city,
+      customerLocation: {
+        address: booking.serviceAddress,
+        latitude: hasCustomerCoords ? Number(booking.location.latitude) : null,
+        longitude: hasCustomerCoords ? Number(booking.location.longitude) : null,
+        customerName: booking.customer?.name || 'Customer',
+        customerPhone: booking.customer?.phoneNumber || null
+      },
+      providerLocation: {
+        address: providerSavedLocation?.address || booking.provider?.city || '',
+        latitude: hasProviderCoords ? Number(providerSavedLocation.latitude) : null,
+        longitude: hasProviderCoords ? Number(providerSavedLocation.longitude) : null,
+        providerName: booking.provider?.name || 'Service Specialist',
+        providerPhone: booking.provider?.phoneNumber || null,
+        title: providerDetails?.title || providerDetails?.category || 'Technician',
+        isBaseLocation: true
+      }
     });
   } catch (error) {
     return next(error);

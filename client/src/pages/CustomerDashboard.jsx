@@ -21,7 +21,6 @@ import Autocomplete from '../components/common/Autocomplete';
 import ProviderCard from '../components/provider/ProviderCard';
 import EmptyState from '../components/common/EmptyState';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import ServiceMap from '../components/map/ServiceMap';
 import { SUPPORTED_CITIES, getCityDisplayName } from '../data/cities';
 import { SERVICE_CATEGORIES } from '../data/sampleData';
 import { providerApi, userApi } from '../services/api';
@@ -495,39 +494,7 @@ export default function CustomerDashboard() {
         )}
       </div>
 
-      {/* 5b. Clearly Visible Map & Location Section */}
-      <div className="card" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <span className="badge badge-primary">Map & Location</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>OpenStreetMap + Leaflet</span>
-            </div>
-            <h2 style={{ fontSize: '1.35rem', color: 'var(--color-text-title)' }}>
-              Service Coverage & Live Specialist Map — {activeCityName}
-            </h2>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>
-              Inspect vetted service specialist coordinates, municipal coverage zones, and appointment locations.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button to={`/customer/map?city=${activeCity}`} variant="primary" size="sm">
-              <MapPin size={15} />
-              <span>Open Full Interactive Map</span>
-            </Button>
-          </div>
-        </div>
-
-        <ServiceMap
-          providers={recommendedProviders}
-          selectedCity={activeCity}
-          height="380px"
-          interactive={true}
-        />
-      </div>
-
-      {/* 6. Recent Bookings Overview with Clean Empty State */}
+      {/* 5. Recent Bookings Overview with Clean Empty State */}
       <div className="card" style={{ padding: '1.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-title)' }}>

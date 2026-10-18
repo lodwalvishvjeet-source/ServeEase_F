@@ -20,6 +20,7 @@ import {
 import Button from '../components/common/Button';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import BookingChatModal from '../components/chat/BookingChatModal';
+import BookingMapModal from '../components/map/BookingMapModal';
 import { useAuth } from '../context/AuthContext';
 import { getCityDisplayName } from '../data/cities';
 import { bookingApi } from '../services/api';
@@ -42,24 +43,49 @@ export default function ProviderBookings() {
 
   // Booking chat modal state & URL deep-linking
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlChatBookingId = searchParams.get('chatBookingId') || searchParams.get('bookingId');
+  const urlChatBookingId = searchParams.get('chatBookingId');
+  const urlMapBookingId = searchParams.get('mapBookingId');
+  const legacyBookingId = searchParams.get('bookingId');
   const [activeChatBooking, setActiveChatBooking] = useState(null);
+  const [activeMapBooking, setActiveMapBooking] = useState(null);
 
   // Auto-open chat modal if query parameter specifies booking ID
   useEffect(() => {
-    if (urlChatBookingId && bookings.length > 0) {
-      const target = bookings.find((b) => String(b._id) === String(urlChatBookingId));
+    const targetId = urlChatBookingId || (!urlMapBookingId ? legacyBookingId : null);
+    if (targetId && bookings.length > 0) {
+      const target = bookings.find((b) => String(b._id) === String(targetId));
       if (target) {
         setActiveChatBooking(target);
       }
     }
-  }, [urlChatBookingId, bookings]);
+  }, [urlChatBookingId, legacyBookingId, urlMapBookingId, bookings]);
+
+  // Auto-open map modal if query parameter specifies map booking ID
+  useEffect(() => {
+    const targetMapId = urlMapBookingId || (legacyBookingId && !urlChatBookingId ? legacyBookingId : null);
+    if (targetMapId && bookings.length > 0) {
+      const target = bookings.find((b) => String(b._id) === String(targetMapId));
+      if (target) {
+        setActiveMapBooking(target);
+      }
+    }
+  }, [urlMapBookingId, legacyBookingId, urlChatBookingId, bookings]);
 
   const handleCloseChat = () => {
     setActiveChatBooking(null);
-    if (urlChatBookingId) {
+    if (urlChatBookingId || legacyBookingId) {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('chatBookingId');
+      nextParams.delete('bookingId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
+  const handleCloseMap = () => {
+    setActiveMapBooking(null);
+    if (urlMapBookingId || legacyBookingId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('mapBookingId');
       nextParams.delete('bookingId');
       setSearchParams(nextParams, { replace: true });
     }
@@ -573,14 +599,66 @@ export default function ProviderBookings() {
                     gap: '0.5rem'
                   }}>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <Button
-                        to={`/provider/map?bookingId=${b._id}`}
-                        variant="outline"
-                        size="sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                      >
-                        <MapPin size={14} /> View Location
-                      </Button>
+                      {/* Booking-based Map & Location Sharing Action */}
+                      {(() => {
+                        const isMapEligible = b.status === 'accepted' || b.status === 'in_progress';
+                        const isCompleted = b.status === 'completed';
+
+                        if (isMapEligible) {
+                          return (
+                            <button
+                              type="button"
+                              id={`view-map-btn-${b._id}`}
+                              onClick={() => setActiveMapBooking(b)}
+                              className="btn btn-outline btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                              title="View customer destination and coordinates on map"
+                            >
+                              <MapPin size={14} style={{ color: 'var(--color-primary-600)' }} /> View Location
+                            </button>
+                          );
+                        }
+
+                        if (isCompleted) {
+                          return (
+                            <button
+                              type="button"
+                              id={`view-map-btn-${b._id}`}
+                              onClick={() => setActiveMapBooking(b)}
+                              className="btn btn-outline btn-sm"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                opacity: 0.7,
+                                color: 'var(--color-text-muted)'
+                              }}
+                              title="Service completed. Precise tracking is revoked."
+                            >
+                              <MapPin size={14} /> Location (Ended)
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            disabled
+                            className="btn btn-outline btn-sm"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              opacity: 0.45,
+                              cursor: 'not-allowed',
+                              color: 'var(--color-text-muted)'
+                            }}
+                            title="Location sharing unavailable for inactive appointments"
+                          >
+                            <MapPin size={14} /> Location Inactive
+                          </button>
+                        );
+                      })()}
 
                       {/* Booking-based messaging action */}
                       {(() => {
@@ -783,6 +861,15 @@ export default function ProviderBookings() {
             booking={activeChatBooking}
             role="provider"
             onClose={handleCloseChat}
+          />
+        )}
+
+        {/* Booking-based Location & Map Modal */}
+        {activeMapBooking && (
+          <BookingMapModal
+            booking={activeMapBooking}
+            role="provider"
+            onClose={handleCloseMap}
           />
         )}
 

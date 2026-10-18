@@ -417,6 +417,12 @@ export const bookingApi = {
     });
   },
 
+  getBookingLocation: async (id) => {
+    return request(`/api/bookings/${encodeURIComponent(id)}/location`, {
+      method: 'GET'
+    });
+  },
+
   getArrivalOtp: async (id) => {
     return request(`/api/bookings/${encodeURIComponent(id)}/arrival-otp`, {
       method: 'GET'

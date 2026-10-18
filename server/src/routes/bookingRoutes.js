@@ -10,6 +10,7 @@ import {
   startBooking,
   completeBooking,
   updateBookingLocation,
+  getBookingLocation,
   getArrivalOtp,
   verifyArrival
 } from '../controllers/bookingController.js';
@@ -54,7 +55,10 @@ router.patch('/:id/complete', authorizeRole('provider'), completeBooking);
 // 9. Update coordinates for an authorized booking (Customer or assigned Provider)
 router.patch('/:id/location', updateBookingLocation);
 
-// 10. Get arrival OTP for confirmed booking (Customer only)
+// 10. Get authorized service and provider location for booking (Assigned Customer or Provider)
+router.get('/:id/location', getBookingLocation);
+
+// 11. Get arrival OTP for confirmed booking (Customer only)
 router.get('/:id/arrival-otp', authorizeRole('customer'), getArrivalOtp);
 
 // 11. Verify arrival on-site via customer OTP (Assigned Provider only)

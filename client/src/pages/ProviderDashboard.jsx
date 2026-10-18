@@ -15,7 +15,6 @@ import {
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import ServiceMap from '../components/map/ServiceMap';
 import { getCityDisplayName } from '../data/cities';
 import { providerApi, reviewApi } from '../services/api';
 import { connectSocket } from '../services/socket';
@@ -491,53 +490,7 @@ export default function ProviderDashboard() {
         </div>
       </div>
 
-      {/* 4b. Clearly Visible Map & Location Section */}
-      <div className="card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <span className="badge badge-primary">Map & Location</span>
-              {providerDetails.location?.latitude ? (
-                <span style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 600 }}>● Workshop Coordinates Published</span>
-              ) : (
-                <span style={{ fontSize: '0.8rem', color: '#d97706', fontWeight: 600 }}>○ Area Coverage Only (No GPS Pin)</span>
-              )}
-            </div>
-            <h2 style={{ fontSize: '1.35rem', color: 'var(--color-text-title)' }}>
-              Service Territory & Workshop Map — {city}
-            </h2>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>
-              Customers in <strong>{serviceArea}</strong>, {city} find you on the live service map. You can manage your base marker or navigate assigned client appointments.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <Button to="/provider/map" variant="primary" size="sm">
-              <MapPin size={15} />
-              <span>Manage Map & Jobs</span>
-            </Button>
-          </div>
-        </div>
-
-        <ServiceMap
-          selectedCity={user?.city || 'sangli'}
-          height="360px"
-          interactive={true}
-          currentLocation={
-            providerDetails.location?.latitude
-              ? {
-                  latitude: Number(providerDetails.location.latitude),
-                  longitude: Number(providerDetails.location.longitude),
-                  address: providerDetails.location.address || serviceArea
-                }
-              : null
-          }
-          emptyTitle="Workshop Location Not Yet Set"
-          emptyMessage="You have not published GPS coordinates for your workshop yet. Click 'Manage Map & Jobs' to drop an exact pin so nearby customers can navigate to you."
-        />
-      </div>
-
-      {/* 4c. Verified Customer Reviews Section */}
+      {/* 4. Verified Customer Reviews Section */}
       <div className="card" id="customer-reviews-section" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>

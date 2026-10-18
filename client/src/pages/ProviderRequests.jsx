@@ -393,15 +393,6 @@ export default function ProviderRequests() {
                       paddingTop: '0.85rem',
                       flexWrap: 'wrap'
                     }}>
-                      <Button
-                        to={`/provider/map?bookingId=${req._id}`}
-                        variant="outline"
-                        size="sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                      >
-                        <MapPin size={14} /> View on Map
-                      </Button>
-
                       <button
                         type="button"
                         disabled={actionLoading}
