@@ -168,7 +168,7 @@ export default function ProviderDetail() {
 
         {/* Provider Profile Hero Card */}
         <div className="provider-detail-hero" style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--color-bg-card)',
           borderRadius: 'var(--radius-xl)',
           padding: '2rem',
           border: '1px solid var(--color-border)',
@@ -303,8 +303,8 @@ export default function ProviderDetail() {
                       style={{
                         padding: '0.75rem 1rem',
                         borderRadius: 'var(--radius-md)',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
+                        backgroundColor: 'var(--color-bg-subtle)',
+                        border: '1px solid var(--color-border)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
@@ -369,8 +369,8 @@ export default function ProviderDetail() {
                 <div style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  border: '1px solid var(--color-border)',
                   fontSize: '0.88rem',
                   color: 'var(--color-text-muted)',
                   marginTop: '0.75rem',
@@ -587,8 +587,8 @@ export default function ProviderDetail() {
                 <div style={{
                   padding: '0.85rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  border: '1px solid var(--color-border)',
                   fontSize: '0.8rem',
                   color: 'var(--color-text-muted)',
                   lineHeight: 1.5
@@ -599,7 +599,7 @@ export default function ProviderDetail() {
                   </div>
                   No upfront advance required. Review details, pick your slot, and pay the technician directly upon service inspection.
                   {provider.phoneNumber && (
-                    <div style={{ marginTop: '0.45rem', paddingTop: '0.45rem', borderTop: '1px dashed #cbd5e1' }}>
+                    <div style={{ marginTop: '0.45rem', paddingTop: '0.45rem', borderTop: '1px dashed var(--color-border)' }}>
                       Direct Coordination: <strong style={{ color: 'var(--color-text-title)' }}>{provider.phoneNumber}</strong>
                     </div>
                   )}

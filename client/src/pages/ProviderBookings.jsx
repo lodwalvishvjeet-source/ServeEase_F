@@ -346,7 +346,7 @@ export default function ProviderBookings() {
                     alignItems: 'flex-start',
                     flexWrap: 'wrap',
                     gap: '1rem',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: '1px solid var(--color-border)',
                     paddingBottom: '1rem',
                     marginBottom: '1rem'
                   }}>
@@ -366,15 +366,12 @@ export default function ProviderBookings() {
                     </div>
 
                     {/* Status Badge */}
-                    <span style={{
-                      display: 'inline-block',
+                    <span className={`badge ${
+                      isCompleted ? 'badge-completed' : isInProgress ? 'badge-in-progress' : isAccepted ? 'badge-accepted' : 'badge-cancelled'
+                    }`} style={{
                       padding: '0.3rem 0.8rem',
-                      borderRadius: 'var(--radius-full)',
                       fontSize: '0.78rem',
-                      fontWeight: 700,
-                      backgroundColor: isCompleted ? '#dcfce7' : isInProgress ? '#f3e8ff' : isAccepted ? '#dbeafe' : '#fee2e2',
-                      color: isCompleted ? '#166534' : isInProgress ? '#6b21a8' : isAccepted ? '#1e40af' : '#991b1b',
-                      border: `1px solid ${isCompleted ? '#bbf7d0' : isInProgress ? '#e9d5ff' : isAccepted ? '#bfdbfe' : '#fecaca'}`
+                      fontWeight: 700
                     }}>
                       {isCompleted ? 'COMPLETED' : isInProgress ? 'IN PROGRESS' : isAccepted ? 'CONFIRMED APPOINTMENT' : b.status.toUpperCase()}
                     </span>
@@ -423,13 +420,13 @@ export default function ProviderBookings() {
                   {/* Customer Instructions */}
                   {b.description && (
                     <div style={{
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--color-bg-subtle)',
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       fontSize: '0.85rem',
                       color: 'var(--color-text-body)',
                       marginBottom: '1rem',
-                      border: '1px solid #e2e8f0'
+                      border: '1px solid var(--color-border)'
                     }}>
                       <strong>Customer Instructions:</strong> "{b.description}"
                     </div>
@@ -440,15 +437,15 @@ export default function ProviderBookings() {
                     <div
                       id={`arrival-verification-box-${b._id}`}
                       style={{
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: 'var(--color-bg-subtle)',
                         padding: '0.85rem 1.15rem',
                         borderRadius: 'var(--radius-md)',
                         marginBottom: '1rem',
-                        border: '1px solid #e2e8f0'
+                        border: '1px solid var(--color-border)'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#1e293b', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.35rem' }}>
-                        <ShieldCheck size={17} style={{ color: '#0284c7' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--color-text-title)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                        <ShieldCheck size={17} style={{ color: 'var(--primary-600)' }} />
                         <span>Confirm On-Site Arrival</span>
                       </div>
                       <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
@@ -476,7 +473,8 @@ export default function ProviderBookings() {
                             fontWeight: 700,
                             borderRadius: 'var(--radius-md)',
                             border: arrivalErrors[b._id] ? '1px solid var(--color-danger)' : '1px solid var(--color-border)',
-                            backgroundColor: '#ffffff'
+                            backgroundColor: 'var(--color-bg-card)',
+                            color: 'var(--color-text-title)'
                           }}
                         />
                         <button
@@ -486,8 +484,6 @@ export default function ProviderBookings() {
                           onClick={() => handleVerifyArrival(b._id)}
                           className="btn btn-primary btn-sm"
                           style={{
-                            backgroundColor: '#0284c7',
-                            borderColor: '#0284c7',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '0.35rem'
@@ -519,19 +515,19 @@ export default function ProviderBookings() {
                     <div
                       id={`arrival-verified-banner-${b._id}`}
                       style={{
-                        backgroundColor: '#f0fdf4',
+                        backgroundColor: 'var(--color-success-bg)',
                         padding: '0.65rem 0.95rem',
                         borderRadius: 'var(--radius-md)',
                         fontSize: '0.85rem',
-                        color: '#166534',
+                        color: 'var(--color-success)',
                         marginBottom: '1rem',
-                        border: '1px solid #bbf7d0',
+                        border: '1px solid var(--primary-600)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem'
                       }}
                     >
-                      <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <CheckCircle2 size={16} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
                       <span>
                         <strong>Arrival Verified</strong>
                         {b.arrivedAt && ` on ${new Date(b.arrivedAt).toLocaleDateString()} at ${new Date(b.arrivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
@@ -544,7 +540,7 @@ export default function ProviderBookings() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    borderTop: '1px solid #f1f5f9',
+                    borderTop: '1px solid var(--color-border)',
                     paddingTop: '0.85rem',
                     flexWrap: 'wrap',
                     gap: '0.5rem'
@@ -646,10 +642,11 @@ export default function ProviderBookings() {
               style={{
                 width: '100%',
                 maxWidth: '460px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--color-bg-card)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '1.75rem',
-                boxShadow: 'var(--shadow-xl)'
+                boxShadow: 'var(--shadow-xl)',
+                border: '1px solid var(--color-border)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#15803d', marginBottom: '0.75rem' }}>

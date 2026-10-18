@@ -525,7 +525,7 @@ export default function ChatInterface({ role = 'customer' }) {
         overflow: 'hidden',
         border: '1px solid var(--color-border)',
         boxShadow: 'var(--shadow-md)',
-        backgroundColor: '#ffffff'
+        backgroundColor: 'var(--color-bg-card)'
       }}
     >
       {/* =========================================================================
@@ -539,11 +539,11 @@ export default function ChatInterface({ role = 'customer' }) {
           borderRight: '1px solid var(--color-border)',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#f8fafc'
+          backgroundColor: 'var(--color-bg-subtle)'
         }}
       >
         {/* Header & Search */}
-        <div style={{ padding: '1.25rem 1rem 0.75rem', borderBottom: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
+        <div style={{ padding: '1.25rem 1rem 0.75rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--color-text-title)', fontWeight: 700 }}>
               Messages
@@ -634,9 +634,9 @@ export default function ChatInterface({ role = 'customer' }) {
                   onClick={() => setActiveConversation(conv)}
                   style={{
                     padding: '0.85rem 1rem',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: '1px solid var(--color-border)',
                     cursor: 'pointer',
-                    backgroundColor: isActive ? '#f0fdf4' : hasUnread ? '#f8fafc' : '#ffffff',
+                    backgroundColor: isActive ? 'var(--primary-100)' : hasUnread ? 'var(--color-bg-subtle)' : 'var(--color-bg-card)',
                     borderLeft: isActive ? '3px solid var(--primary-600)' : '3px solid transparent',
                     transition: 'all 0.15s ease',
                     display: 'flex',
@@ -743,7 +743,7 @@ export default function ChatInterface({ role = 'customer' }) {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#ffffff'
+          backgroundColor: 'var(--color-bg-card)'
         }}
       >
         {activeConversation ? (
@@ -755,7 +755,7 @@ export default function ChatInterface({ role = 'customer' }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#ffffff'
+              backgroundColor: 'var(--color-bg-card)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 {/* Back button on mobile */}
@@ -889,7 +889,7 @@ export default function ChatInterface({ role = 'customer' }) {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.75rem',
-                backgroundColor: '#f8fafc'
+                backgroundColor: 'var(--color-bg-page)'
               }}
             >
               {loadingMessages ? (
@@ -927,10 +927,10 @@ export default function ChatInterface({ role = 'customer' }) {
                         style={{
                           padding: '0.65rem 0.95rem',
                           borderRadius: isMine ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          backgroundColor: isMine ? 'var(--primary-600)' : '#ffffff',
+                          backgroundColor: isMine ? 'var(--primary-600)' : 'var(--color-bg-card)',
                           color: isMine ? '#ffffff' : 'var(--color-text-title)',
                           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                          border: isMine ? 'none' : '1px solid #e2e8f0',
+                          border: isMine ? 'none' : '1px solid var(--color-border)',
                           fontSize: '0.9rem',
                           lineHeight: 1.45,
                           wordBreak: 'break-word',
@@ -976,7 +976,7 @@ export default function ChatInterface({ role = 'customer' }) {
                 style={{
                   padding: '1rem 1.25rem',
                   borderTop: '1px solid var(--color-border)',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--color-bg-subtle)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -996,7 +996,7 @@ export default function ChatInterface({ role = 'customer' }) {
                 style={{
                   padding: '0.85rem 1rem',
                   borderTop: '1px solid var(--color-border)',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--color-bg-card)',
                   display: 'flex',
                   gap: '0.5rem',
                   alignItems: 'center'
@@ -1016,7 +1016,7 @@ export default function ChatInterface({ role = 'customer' }) {
                     border: '1px solid var(--color-border)',
                     outline: 'none',
                     fontSize: '0.9rem',
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: 'var(--color-bg-subtle)',
                     color: 'var(--color-text-title)'
                   }}
                 />

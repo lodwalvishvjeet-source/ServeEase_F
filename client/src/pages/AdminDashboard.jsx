@@ -1473,7 +1473,7 @@ export default function AdminDashboard() {
                     const isSelf = user?._id === u._id;
                     const isSuspended = u.status === 'suspended';
                     return (
-                      <tr key={u._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <tr key={u._id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                         <td style={{ padding: '0.75rem 0.5rem' }}>
                           <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{u.name}</strong>
                           <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{u.email}</span>
@@ -1873,7 +1873,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {bookings.map((b) => (
-                    <tr key={b._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={b._id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '0.75rem 0.5rem' }}>
                         <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{b.serviceName}</strong>
                         <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
@@ -2164,7 +2164,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {auditLogs.map((log) => (
-                    <tr key={log._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={log._id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '0.65rem 0.5rem', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
                         {new Date(log.createdAt).toLocaleString('en-IN')}
                       </td>
@@ -2245,7 +2245,7 @@ export default function AdminDashboard() {
             padding: '1rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '2rem', backgroundColor: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--color-text-title)' }}>
@@ -2300,7 +2300,7 @@ export default function AdminDashboard() {
             padding: '1rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: actionStatusType === 'suspended' ? 'var(--color-danger)' : 'var(--color-success)' }}>
               <ShieldAlert size={22} />
               <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
@@ -2375,7 +2375,7 @@ export default function AdminDashboard() {
             padding: '1rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--color-danger)' }}>
               <Trash2 size={22} />
               <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
@@ -2450,7 +2450,7 @@ export default function AdminDashboard() {
             padding: '1rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+          <div className="card" style={{ maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', backgroundColor: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: verifyDecision ? '#16a34a' : '#dc2626' }}>
               <UserCheck size={22} />
               <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>
@@ -2495,9 +2495,9 @@ export default function AdminDashboard() {
                       other: 'Other Credential'
                     };
                     return (
-                      <div key={docId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                      <div key={docId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-card)', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '0.82rem' }}>
                         <div>
-                          <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--color-text-title)', display: 'block' }}>
                             {typeNames[doc.documentType] || doc.documentType}
                           </span>
                           <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
@@ -2598,7 +2598,7 @@ export default function AdminDashboard() {
             padding: '1rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-xl)' }}>
+          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2rem', backgroundColor: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: modStatus === 'hidden' ? '#dc2626' : '#16a34a' }}>
               <Star size={22} />
               <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)' }}>

@@ -26,7 +26,7 @@ export default function About() {
         />
 
         {/* Project Mission Banner */}
-        <div className="card" style={{ padding: '2.5rem', marginBottom: '3rem', backgroundColor: '#ffffff' }}>
+        <div className="card" style={{ padding: '2.5rem', marginBottom: '3rem' }}>
           <div className="grid-2" style={{ alignItems: 'center', gap: '2.5rem' }}>
             <div>
               <span className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>

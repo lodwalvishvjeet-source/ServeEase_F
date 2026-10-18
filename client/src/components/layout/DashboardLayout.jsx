@@ -254,13 +254,10 @@ export default function DashboardLayout({ children, title, subtitle }) {
           }}>
             {user?.role === 'provider' ? 'Provider Workspace' : user?.role === 'admin' ? 'Admin Workspace' : 'Customer Workspace'}
           </span>
-          <span style={{
+          <span className={`badge ${user?.role === 'provider' ? 'badge-warning' : user?.role === 'admin' ? 'badge-prototype' : 'badge-primary'}`} style={{
             fontSize: '0.7rem',
-            fontWeight: 700,
             padding: '0.1rem 0.45rem',
-            borderRadius: 'var(--radius-full)',
-            backgroundColor: user?.role === 'provider' ? '#fef3c7' : user?.role === 'admin' ? '#fee2e2' : '#dcfce7',
-            color: user?.role === 'provider' ? '#92400e' : user?.role === 'admin' ? '#991b1b' : '#166534'
+            textTransform: 'capitalize'
           }}>
             {user?.role}
           </span>
@@ -282,21 +279,16 @@ export default function DashboardLayout({ children, title, subtitle }) {
                     border: 'none',
                     width: '100%',
                     cursor: 'pointer',
-                    textAlign: 'left',
-                    color: isAvailable ? '#15803d' : '#64748b'
+                    textAlign: 'left'
                   }}
                   title="Toggle Working Availability"
                 >
                   {item.icon}
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                     <span>{item.label}</span>
-                    <span style={{
+                    <span className={`badge ${isAvailable ? 'badge-completed' : 'badge-rejected'}`} style={{
                       fontSize: '0.72rem',
-                      fontWeight: 700,
-                      padding: '0.1rem 0.4rem',
-                      borderRadius: 'var(--radius-full)',
-                      backgroundColor: isAvailable ? '#dcfce7' : '#f1f5f9',
-                      color: isAvailable ? '#166534' : '#64748b'
+                      padding: '0.1rem 0.45rem'
                     }}>
                       {isAvailable ? 'Taking Jobs' : 'Offline'}
                     </span>
@@ -403,20 +395,16 @@ export default function DashboardLayout({ children, title, subtitle }) {
                   alignItems: 'center',
                   gap: '0.4rem',
                   padding: '0.35rem 0.75rem',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: isAvailable ? '#f0fdf4' : '#f8fafc',
-                  color: isAvailable ? '#15803d' : '#64748b',
                   fontSize: '0.82rem',
-                  fontWeight: 600,
-                  border: `1px solid ${isAvailable ? '#bbf7d0' : '#e2e8f0'}`,
                   cursor: 'pointer'
                 }}
+                className={`badge ${isAvailable ? 'badge-completed' : 'badge-rejected'}`}
               >
                 <span style={{
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: isAvailable ? '#16a34a' : '#94a3b8'
+                  backgroundColor: isAvailable ? 'var(--primary-500)' : 'var(--color-text-subtle)'
                 }} />
                 <span>{isAvailable ? 'Taking Jobs' : 'Offline'}</span>
               </button>

@@ -186,7 +186,7 @@ function PublicLandingView() {
 
             {/* Hero Search Box with City Selector */}
             <div style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--color-bg-card)',
               borderRadius: 'var(--radius-lg)',
               padding: '0.75rem',
               boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.3)',
@@ -326,7 +326,7 @@ function PublicLandingView() {
       </section>
 
       {/* Featured Local Providers in City */}
-      <section className="section-spacing" style={{ backgroundColor: '#ffffff', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+      <section className="section-spacing" style={{ backgroundColor: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
@@ -449,7 +449,7 @@ function PublicLandingView() {
       </section>
 
       {/* Trust & Safety Section */}
-      <section className="section-spacing" style={{ backgroundColor: '#ffffff', borderTop: '1px solid var(--color-border)' }}>
+      <section className="section-spacing" style={{ backgroundColor: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border)' }}>
         <div className="container">
           <div className="grid-2" style={{ alignItems: 'center', gap: '3rem' }}>
             <div>
@@ -645,7 +645,7 @@ function CustomerHomeView({ user }) {
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '1.5rem',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--color-bg-card)',
           borderLeft: '4px solid var(--primary-600)'
         }}>
           <div>
@@ -708,10 +708,10 @@ function CustomerHomeView({ user }) {
         <div className="card" style={{
           padding: '1.75rem',
           marginBottom: '2.5rem',
-          background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)',
-          border: '1px solid var(--primary-100)'
+          backgroundColor: 'var(--color-bg-card)',
+          border: '1px solid var(--color-border)'
         }}>
-          <h2 style={{ fontSize: '1.25rem', color: 'var(--primary-900)', marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)', marginBottom: '0.75rem' }}>
             What service do you need today?
           </h2>
 
@@ -724,7 +724,7 @@ function CustomerHomeView({ user }) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--color-bg-subtle)',
               padding: '0.75rem 1rem',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--color-border)'
@@ -741,6 +741,7 @@ function CustomerHomeView({ user }) {
                   outline: 'none',
                   width: '100%',
                   fontSize: '1rem',
+                  backgroundColor: 'transparent',
                   color: 'var(--color-text-title)'
                 }}
               />
@@ -758,7 +759,7 @@ function CustomerHomeView({ user }) {
                 type="button"
                 onClick={() => navigate(`/services?city=${activeCity}&category=${encodeURIComponent(trade)}`)}
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--color-bg-subtle)',
                   border: '1px solid var(--color-border)',
                   borderRadius: 'var(--radius-full)',
                   padding: '0.3rem 0.75rem',

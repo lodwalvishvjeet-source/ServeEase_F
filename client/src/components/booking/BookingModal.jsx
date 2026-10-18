@@ -220,9 +220,10 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
           maxWidth: '580px',
           maxHeight: '92vh',
           overflowY: 'auto',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--color-bg-card)',
           borderRadius: 'var(--radius-xl)',
           padding: '2rem',
+          border: '1px solid var(--color-border)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative'
         }}
@@ -287,8 +288,8 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
             {user?.role === 'customer' && !user?.emailVerified && (
               <div className="alert-box" style={{
                 marginBottom: '1.25rem',
-                backgroundColor: '#fffbeb',
-                border: '1px solid #fde68a',
+                backgroundColor: 'var(--color-warning-bg)',
+                border: '1px solid var(--color-warning)',
                 borderRadius: 'var(--radius-md)',
                 padding: '0.85rem 1rem',
                 display: 'flex',
@@ -298,8 +299,8 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
                 gap: '0.75rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <AlertCircle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
-                  <div style={{ fontSize: '0.86rem', color: '#92400e' }}>
+                  <AlertCircle size={18} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                  <div style={{ fontSize: '0.86rem', color: 'var(--color-text-title)' }}>
                     <strong>Email verification required:</strong> Please verify your email address to complete booking.
                   </div>
                 </div>
@@ -363,7 +364,7 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
                     value={cityName}
                     readOnly
                     className="form-control"
-                    style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed', color: 'var(--color-text-muted)' }}
+                    style={{ backgroundColor: 'var(--color-bg-subtle)', cursor: 'not-allowed', color: 'var(--color-text-muted)' }}
                   />
                 </div>
 
@@ -376,7 +377,7 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
                     value={provider.serviceArea || provider.providerDetails?.serviceArea || cityName}
                     readOnly
                     className="form-control"
-                    style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed', color: 'var(--color-text-muted)' }}
+                    style={{ backgroundColor: 'var(--color-bg-subtle)', cursor: 'not-allowed', color: 'var(--color-text-muted)' }}
                   />
                 </div>
               </div>
@@ -464,10 +465,10 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
 
               {/* Pricing Transparency Summary */}
               <div style={{
-                backgroundColor: '#f8fafc',
+                backgroundColor: 'var(--color-bg-subtle)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '1rem',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--color-border)',
                 marginBottom: '1.5rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -529,9 +530,9 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
             )}
 
             <div style={{
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--color-bg-subtle)',
               borderRadius: 'var(--radius-lg)',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--color-border)',
               padding: '1.25rem',
               marginBottom: '1.5rem',
               display: 'flex',
@@ -539,27 +540,27 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
               gap: '0.85rem',
               fontSize: '0.9rem'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--color-text-muted)' }}>Assigned Technician:</span>
                 <strong style={{ color: 'var(--color-text-title)' }}>{provider.name}</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--color-text-muted)' }}>Requested Service:</span>
                 <strong style={{ color: 'var(--color-text-title)' }}>{selectedService}</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--color-text-muted)' }}>Scheduled Date & Time:</span>
                 <strong style={{ color: 'var(--primary-700)' }}>{bookingDate} • {bookingTime}</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--color-text-muted)' }}>City:</span>
                 <strong style={{ color: 'var(--color-text-title)' }}>{cityName}</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--color-text-muted)' }}>Service Address:</span>
                 <span style={{ textAlign: 'right', maxWidth: '280px', color: 'var(--color-text-title)', fontWeight: 500 }}>
                   {serviceAddress}
@@ -567,7 +568,7 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
               </div>
 
               {description && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Instructions:</span>
                   <span style={{ textAlign: 'right', maxWidth: '280px', color: 'var(--color-text-body)' }}>
                     "{description}"
@@ -621,8 +622,8 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
               width: '4.5rem',
               height: '4.5rem',
               borderRadius: '50%',
-              backgroundColor: '#dcfce7',
-              color: '#15803d',
+              backgroundColor: 'var(--color-success-bg)',
+              color: 'var(--color-success)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -641,10 +642,10 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
             </p>
 
             <div style={{
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--color-bg-subtle)',
               borderRadius: 'var(--radius-lg)',
               padding: '1rem',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--color-border)',
               marginBottom: '1.75rem',
               textAlign: 'left',
               fontSize: '0.85rem'

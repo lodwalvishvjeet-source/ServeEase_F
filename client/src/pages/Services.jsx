@@ -565,7 +565,7 @@ export default function Services() {
                 textAlign: 'left',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--color-bg-card)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'flex',
@@ -799,7 +799,7 @@ export default function Services() {
             alignItems: 'center',
             gap: '0.4rem',
             padding: '0.55rem 0.8rem',
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--color-bg-card)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)'
           }}>

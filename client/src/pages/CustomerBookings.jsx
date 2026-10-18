@@ -32,51 +32,37 @@ const getStatusBadge = (status) => {
     case 'pending':
       return {
         label: 'Pending Confirmation',
-        bg: '#fef3c7',
-        color: '#92400e',
-        border: '#fde68a'
+        className: 'badge-pending'
       };
     case 'accepted':
       return {
         label: 'Confirmed / Accepted',
-        bg: '#dbeafe',
-        color: '#1e40af',
-        border: '#bfdbfe'
+        className: 'badge-accepted'
       };
     case 'in_progress':
       return {
         label: 'In Progress',
-        bg: '#f3e8ff',
-        color: '#6b21a8',
-        border: '#e9d5ff'
+        className: 'badge-in-progress'
       };
     case 'completed':
       return {
         label: 'Completed',
-        bg: '#dcfce7',
-        color: '#166534',
-        border: '#bbf7d0'
+        className: 'badge-completed'
       };
     case 'cancelled':
       return {
         label: 'Cancelled',
-        bg: '#fee2e2',
-        color: '#991b1b',
-        border: '#fecaca'
+        className: 'badge-cancelled'
       };
     case 'rejected':
       return {
         label: 'Declined by Technician',
-        bg: '#f1f5f9',
-        color: '#475569',
-        border: '#e2e8f0'
+        className: 'badge-rejected'
       };
     default:
       return {
-        label: status,
-        bg: '#f1f5f9',
-        color: '#475569',
-        border: '#e2e8f0'
+        label: status || 'Unknown',
+        className: 'badge-muted'
       };
   }
 };
@@ -405,7 +391,7 @@ export default function CustomerBookings() {
                     alignItems: 'flex-start',
                     flexWrap: 'wrap',
                     gap: '1rem',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: '1px solid var(--color-border)',
                     paddingBottom: '1rem',
                     marginBottom: '1rem'
                   }}>
@@ -432,7 +418,7 @@ export default function CustomerBookings() {
                             {b.serviceName}
                           </h4>
                           {b.category && (
-                            <span style={{ fontSize: '0.72rem', backgroundColor: '#f1f5f9', padding: '0.15rem 0.5rem', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>
+                            <span style={{ fontSize: '0.72rem', backgroundColor: 'var(--color-bg-subtle)', padding: '0.15rem 0.5rem', borderRadius: '4px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
                               {b.category}
                             </span>
                           )}
@@ -450,15 +436,8 @@ export default function CustomerBookings() {
                     </div>
 
                     {/* Status Badge */}
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
+                    <div className={`badge ${statusBadge.className}`} style={{
                       padding: '0.35rem 0.85rem',
-                      borderRadius: 'var(--radius-full)',
-                      backgroundColor: statusBadge.bg,
-                      color: statusBadge.color,
-                      border: `1px solid ${statusBadge.border}`,
                       fontSize: '0.8rem',
                       fontWeight: 700
                     }}>
@@ -466,7 +445,7 @@ export default function CustomerBookings() {
                         width: '7px',
                         height: '7px',
                         borderRadius: '50%',
-                        backgroundColor: statusBadge.color
+                        backgroundColor: 'currentColor'
                       }} />
                       {statusBadge.label}
                     </div>
@@ -518,13 +497,13 @@ export default function CustomerBookings() {
                   {/* Optional Customer Description or Rejection Reason */}
                   {b.description && (
                     <div style={{
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--color-bg-subtle)',
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       fontSize: '0.85rem',
                       color: 'var(--color-text-body)',
                       marginBottom: '1rem',
-                      border: '1px solid #e2e8f0'
+                      border: '1px solid var(--color-border)'
                     }}>
                       <strong>Special Instructions:</strong> "{b.description}"
                     </div>
@@ -532,13 +511,13 @@ export default function CustomerBookings() {
 
                   {b.rejectionReason && (
                     <div style={{
-                      backgroundColor: '#fef2f2',
+                      backgroundColor: 'var(--color-danger-bg)',
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       fontSize: '0.85rem',
-                      color: '#991b1b',
+                      color: 'var(--color-danger)',
                       marginBottom: '1rem',
-                      border: '1px solid #fee2e2'
+                      border: '1px solid var(--color-border)'
                     }}>
                       <strong>Technician Decline Reason:</strong> "{b.rejectionReason}"
                     </div>
@@ -546,13 +525,13 @@ export default function CustomerBookings() {
 
                   {b.cancellationReason && (
                     <div style={{
-                      backgroundColor: '#fef2f2',
+                      backgroundColor: 'var(--color-danger-bg)',
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       fontSize: '0.85rem',
-                      color: '#991b1b',
+                      color: 'var(--color-danger)',
                       marginBottom: '1rem',
-                      border: '1px solid #fee2e2'
+                      border: '1px solid var(--color-border)'
                     }}>
                       <strong>Cancellation Note:</strong> "{b.cancellationReason}"
                     </div>
@@ -563,20 +542,20 @@ export default function CustomerBookings() {
                     <div
                       id={`arrival-otp-card-${b._id}`}
                       style={{
-                        background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                        backgroundColor: 'var(--color-success-bg)',
                         padding: '1rem 1.25rem',
                         borderRadius: 'var(--radius-lg)',
-                        border: '1.5px solid #a7f3d0',
+                        border: '1.5px solid var(--primary-600)',
                         marginBottom: '1rem',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.08)'
+                        boxShadow: 'var(--shadow-xs)'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#065f46', fontWeight: 700, fontSize: '0.92rem' }}>
-                          <ShieldCheck size={18} style={{ color: '#059669' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--primary-600)', fontWeight: 700, fontSize: '0.92rem' }}>
+                          <ShieldCheck size={18} style={{ color: 'var(--primary-600)' }} />
                           <span>Technician Arrival Verification Code</span>
                         </div>
-                        <span style={{ fontSize: '0.75rem', color: '#047857', backgroundColor: '#d1fae5', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontWeight: 600 }}>
+                        <span className="badge badge-completed" style={{ fontSize: '0.75rem' }}>
                           Share only after arrival
                         </span>
                       </div>
@@ -588,17 +567,17 @@ export default function CustomerBookings() {
                             fontSize: '1.65rem',
                             fontWeight: 800,
                             letterSpacing: '0.35em',
-                            color: '#064e3b',
-                            backgroundColor: '#ffffff',
+                            color: 'var(--primary-600)',
+                            backgroundColor: 'var(--color-bg-card)',
                             padding: '0.4rem 1.1rem',
                             borderRadius: 'var(--radius-md)',
-                            border: '1px dashed #059669',
+                            border: '1.5px dashed var(--primary-600)',
                             display: 'inline-block'
                           }}
                         >
                           {b.arrivalOtp}
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.84rem', color: '#047857', maxWidth: '440px', lineHeight: 1.45 }}>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-body)', maxWidth: '440px', lineHeight: 1.45 }}>
                           Please share this 6-digit code with the technician <strong>only after they arrive</strong> at your location to confirm arrival.
                         </p>
                       </div>
@@ -610,23 +589,23 @@ export default function CustomerBookings() {
                     <div
                       id={`arrival-verified-banner-${b._id}`}
                       style={{
-                        backgroundColor: '#f0fdf4',
+                        backgroundColor: 'var(--color-success-bg)',
                         padding: '0.75rem 1rem',
                         borderRadius: 'var(--radius-md)',
                         fontSize: '0.88rem',
-                        color: '#166534',
+                        color: 'var(--color-success)',
                         marginBottom: '1rem',
-                        border: '1px solid #bbf7d0',
+                        border: '1px solid var(--primary-600)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.6rem'
                       }}
                     >
-                      <CheckCircle2 size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <CheckCircle2 size={18} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
                       <div>
                         <strong>Technician Arrival Verified</strong>
                         {b.arrivedAt && (
-                          <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#15803d' }}>
+                          <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                             — technician confirmed arrival on {new Date(b.arrivedAt).toLocaleDateString()} at {new Date(b.arrivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
@@ -802,10 +781,11 @@ export default function CustomerBookings() {
               style={{
                 width: '100%',
                 maxWidth: '460px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--color-bg-card)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '1.75rem',
-                boxShadow: 'var(--shadow-xl)'
+                boxShadow: 'var(--shadow-xl)',
+                border: '1px solid var(--color-border)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-danger)', marginBottom: '0.75rem' }}>
@@ -844,8 +824,7 @@ export default function CustomerBookings() {
                   type="button"
                   disabled={isCancelling}
                   onClick={handleConfirmCancel}
-                  className="btn btn-primary"
-                  style={{ backgroundColor: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                  className="btn btn-danger"
                 >
                   {isCancelling ? (
                     <>
@@ -884,10 +863,11 @@ export default function CustomerBookings() {
               style={{
                 width: '100%',
                 maxWidth: '520px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--color-bg-card)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '2rem',
-                boxShadow: 'var(--shadow-xl)'
+                boxShadow: 'var(--shadow-xl)',
+                border: '1px solid var(--color-border)'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
@@ -1037,10 +1017,11 @@ export default function CustomerBookings() {
               style={{
                 width: '100%',
                 maxWidth: '480px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--color-bg-card)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '2rem',
-                boxShadow: 'var(--shadow-xl)'
+                boxShadow: 'var(--shadow-xl)',
+                border: '1px solid var(--color-border)'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>

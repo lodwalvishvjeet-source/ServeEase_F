@@ -237,8 +237,8 @@ export default function ProviderNotifications() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '1rem',
-                    backgroundColor: isUnread ? '#f0fdf4' : '#ffffff',
-                    border: isUnread ? '1px solid #bbf7d0' : '1px solid var(--color-border)',
+                    backgroundColor: isUnread ? 'var(--color-success-bg)' : 'var(--color-bg-card)',
+                    border: isUnread ? '1px solid var(--color-success)' : '1px solid var(--color-border)',
                     boxShadow: isUnread ? 'var(--shadow-sm)' : 'none',
                     transition: 'all 0.15s ease'
                   }}
@@ -248,7 +248,7 @@ export default function ProviderNotifications() {
                     width: '2.5rem',
                     height: '2.5rem',
                     borderRadius: '50%',
-                    backgroundColor: isUnread ? '#dcfce7' : 'var(--color-bg-page)',
+                    backgroundColor: isUnread ? 'var(--color-success-bg)' : 'var(--color-bg-subtle)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -264,7 +264,7 @@ export default function ProviderNotifications() {
                         <h4 style={{
                           margin: 0,
                           fontSize: '1rem',
-                          color: isUnread ? 'var(--primary-900)' : 'var(--color-text-title)',
+                          color: isUnread ? 'var(--primary-600)' : 'var(--color-text-title)',
                           fontWeight: isUnread ? 700 : 600
                         }}>
                           {n.title}
