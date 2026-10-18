@@ -13,7 +13,6 @@ import {
   RefreshCw,
   Wrench,
   AlertCircle,
-  MessageSquare,
   ExternalLink
 } from 'lucide-react';
 import Button from '../components/common/Button';
@@ -565,24 +564,6 @@ export default function ProviderDetail() {
                   <Calendar size={18} />
                   <span>{isAvailable ? 'Request Booking' : 'Technician Offline'}</span>
                 </button>
-
-                <Button
-                  to={`/customer/messages?providerId=${provider.id || provider._id}`}
-                  variant="outline"
-                  size="lg"
-                  className="btn-block"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    border: '1px solid var(--primary-600)',
-                    color: 'var(--primary-700)'
-                  }}
-                >
-                  <MessageSquare size={17} />
-                  <span>Message Specialist</span>
-                </Button>
 
                 <div style={{
                   padding: '0.85rem',

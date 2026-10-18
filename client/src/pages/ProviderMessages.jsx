@@ -1,20 +1,23 @@
-import React from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import ChatInterface from '../components/chat/ChatInterface';
+import React, { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 /**
- * Provider Messages Page (/provider/messages)
- * Direct real-time messaging hub for consulting with clients.
+ * Provider Messages Page
+ * Standalone messages section has been removed.
+ * Redirects to My Bookings, optionally opening the chat modal for the specified booking.
  */
 export default function ProviderMessages() {
-  return (
-    <DashboardLayout
-      title="Client Inquiries & Messages"
-      subtitle="Communicate directly with clients regarding appliance issues, diagnostic requirements, and appointment times"
-    >
-      <div className="provider-messages-content">
-        <ChatInterface role="provider" />
-      </div>
-    </DashboardLayout>
-  );
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingId = searchParams.get('bookingId') || searchParams.get('chatBookingId');
+
+  useEffect(() => {
+    if (bookingId) {
+      navigate(`/provider/bookings?chatBookingId=${encodeURIComponent(bookingId)}`, { replace: true });
+    } else {
+      navigate('/provider/bookings', { replace: true });
+    }
+  }, [navigate, bookingId]);
+
+  return null;
 }

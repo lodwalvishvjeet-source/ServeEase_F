@@ -10,7 +10,6 @@ import {
   Briefcase, 
   Compass, 
   Calendar, 
-  MessageSquare, 
   Bell, 
   Search, 
   MapPin,
@@ -124,11 +123,6 @@ export default function Navbar() {
                   </NavLink>
                 </li>
                 <li>
-                  <NavLink to="/customer/messages" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                    Messages
-                  </NavLink>
-                </li>
-                <li>
                   <NavLink to="/customer/notifications" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     Notifications
                   </NavLink>
@@ -157,11 +151,6 @@ export default function Navbar() {
                 <li>
                   <NavLink to="/provider/bookings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     My Bookings
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/provider/messages" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                    Messages
                   </NavLink>
                 </li>
                 <li>
@@ -348,11 +337,6 @@ export default function Navbar() {
                   </NavLink>
                 </li>
                 <li>
-                  <NavLink to="/customer/messages" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
-                    Messages
-                  </NavLink>
-                </li>
-                <li>
                   <NavLink to="/customer/notifications" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
                     Notifications
                   </NavLink>
@@ -385,11 +369,6 @@ export default function Navbar() {
                 <li>
                   <NavLink to="/provider/bookings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
                     My Bookings
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/provider/messages" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
-                    Messages
                   </NavLink>
                 </li>
                 <li>

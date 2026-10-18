@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Calendar, 
   Clock, 
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import BookingChatModal from '../components/chat/BookingChatModal';
 import { useAuth } from '../context/AuthContext';
 import { getCityDisplayName } from '../data/cities';
 import { bookingApi, reviewApi } from '../services/api';
@@ -93,6 +95,31 @@ export default function CustomerBookings() {
   const [reviewError, setReviewError] = useState(null);
   const [reviewSuccess, setReviewSuccess] = useState(null);
   const [viewingReview, setViewingReview] = useState(null);
+
+  // Booking chat modal state & URL deep-linking
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlChatBookingId = searchParams.get('chatBookingId') || searchParams.get('bookingId');
+  const [activeChatBooking, setActiveChatBooking] = useState(null);
+
+  // Auto-open chat modal if query parameter specifies booking ID
+  useEffect(() => {
+    if (urlChatBookingId && bookings.length > 0) {
+      const target = bookings.find((b) => String(b._id) === String(urlChatBookingId));
+      if (target) {
+        setActiveChatBooking(target);
+      }
+    }
+  }, [urlChatBookingId, bookings]);
+
+  const handleCloseChat = () => {
+    setActiveChatBooking(null);
+    if (urlChatBookingId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('chatBookingId');
+      nextParams.delete('bookingId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   const userCityDisplay = user?.city ? getCityDisplayName(user.city) : 'Sangli';
 
@@ -684,14 +711,76 @@ export default function CustomerBookings() {
                         <MapPin size={14} /> Map Location
                       </Button>
 
-                      <Button
-                        to={`/customer/messages?bookingId=${b._id}`}
-                        variant="primary"
-                        size="sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                      >
-                        <MessageSquare size={14} /> Message
-                      </Button>
+                      {/* Booking-based messaging action */}
+                      {(() => {
+                        const isChatEligible = b.status === 'accepted' || b.status === 'in_progress';
+                        const isPending = b.status === 'pending';
+                        const isCompleted = b.status === 'completed';
+
+                        if (isChatEligible) {
+                          return (
+                            <button
+                              type="button"
+                              id={`message-provider-btn-${b._id}`}
+                              onClick={() => setActiveChatBooking(b)}
+                              className="btn btn-primary btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            >
+                              <MessageSquare size={14} /> Message Provider
+                            </button>
+                          );
+                        }
+
+                        if (isPending) {
+                          return (
+                            <button
+                              type="button"
+                              disabled
+                              title="Chat messaging unlocks once the provider accepts your booking request"
+                              className="btn btn-outline btn-sm"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                opacity: 0.65,
+                                cursor: 'not-allowed',
+                                color: 'var(--color-text-muted)'
+                              }}
+                            >
+                              <MessageSquare size={14} /> Message Provider (Unlocks when accepted)
+                            </button>
+                          );
+                        }
+
+                        if (isCompleted) {
+                          return (
+                            <button
+                              type="button"
+                              id={`message-history-btn-${b._id}`}
+                              onClick={() => setActiveChatBooking(b)}
+                              className="btn btn-outline btn-sm"
+                              title="View chat history for this completed service"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            >
+                              <MessageSquare size={14} /> View Chat History
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <span
+                            style={{
+                              fontSize: '0.78rem',
+                              color: 'var(--color-text-muted)',
+                              padding: '0.3rem 0.6rem',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: 'var(--color-bg-subtle)'
+                            }}
+                          >
+                            Chat Unavailable ({b.status === 'cancelled' ? 'Cancelled' : 'Declined'})
+                          </span>
+                        );
+                      })()}
 
                       {/* Review Action for Completed Bookings */}
                       {b.status === 'completed' && (
@@ -1083,6 +1172,15 @@ export default function CustomerBookings() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Booking-based Real-time Chat Modal */}
+        {activeChatBooking && (
+          <BookingChatModal
+            booking={activeChatBooking}
+            role="customer"
+            onClose={handleCloseChat}
+          />
         )}
 
       </div>

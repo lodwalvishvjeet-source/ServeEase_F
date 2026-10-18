@@ -16,7 +16,8 @@ import {
   WifiOff,
   RefreshCw,
   Info,
-  Lock
+  Lock,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatApi } from '../../services/api';
@@ -24,10 +25,20 @@ import { getSocket, connectSocket } from '../../services/socket';
 
 /**
  * Full-Featured Real-Time Customer-Provider Chat Interface
+ * Can operate standalone or scoped directly to a specific booking appointment.
  */
-export default function ChatInterface({ role = 'customer' }) {
+export default function ChatInterface({
+  role = 'customer',
+  bookingId = null,
+  initialBooking = null,
+  isBookingScoped = false,
+  onClose = null
+}) {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const effectiveBookingId = bookingId || searchParams.get('bookingId');
+  const effectiveIsBookingScoped = isBookingScoped || Boolean(bookingId);
 
   // State
   const [conversations, setConversations] = useState([]);
@@ -98,10 +109,42 @@ export default function ChatInterface({ role = 'customer' }) {
     }
   }, [paramConversationId]);
 
+  // Handle booking-scoped conversation initialization
+  useEffect(() => {
+    if (!user || !effectiveIsBookingScoped || !effectiveBookingId) return;
+
+    let isSubscribed = true;
+    const fetchBookingConversation = async () => {
+      setLoadingConversations(true);
+      setError(null);
+      try {
+        const res = await chatApi.createOrGetConversation({
+          bookingId: effectiveBookingId
+        });
+        if (isSubscribed && res.success && res.conversation) {
+          setActiveConversation(res.conversation);
+        }
+      } catch (err) {
+        if (isSubscribed) {
+          setError(err.message || 'Could not load conversation for this booking.');
+        }
+      } finally {
+        if (isSubscribed) {
+          setLoadingConversations(false);
+        }
+      }
+    };
+
+    fetchBookingConversation();
+    return () => {
+      isSubscribed = false;
+    };
+  }, [user, effectiveIsBookingScoped, effectiveBookingId]);
+
   // Handle URL initiated conversation (e.g. from booking or provider profile)
   const isInitiatingRef = useRef(false);
   useEffect(() => {
-    if (!user) return;
+    if (!user || effectiveIsBookingScoped) return;
 
     if (paramBookingId || paramProviderId) {
       if (isInitiatingRef.current) return;
@@ -519,29 +562,30 @@ export default function ChatInterface({ role = 'customer' }) {
       className="card chat-container"
       style={{
         padding: 0,
-        height: '75vh',
-        minHeight: '520px',
+        height: effectiveIsBookingScoped ? '100%' : '75vh',
+        minHeight: effectiveIsBookingScoped ? '460px' : '520px',
         display: 'flex',
         overflow: 'hidden',
-        border: '1px solid var(--color-border)',
-        boxShadow: 'var(--shadow-md)',
+        border: effectiveIsBookingScoped ? 'none' : '1px solid var(--color-border)',
+        boxShadow: effectiveIsBookingScoped ? 'none' : 'var(--shadow-md)',
         backgroundColor: 'var(--color-bg-card)'
       }}
     >
       {/* =========================================================================
-          LEFT PANE: CONVERSATION LIST
+          LEFT PANE: CONVERSATION LIST (Shown only in standalone mode)
           ========================================================================= */}
-      <div
-        className={`chat-sidebar ${activeConversation ? 'hide-on-mobile' : ''}`}
-        style={{
-          width: '320px',
-          minWidth: '280px',
-          borderRight: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: 'var(--color-bg-subtle)'
-        }}
-      >
+      {!effectiveIsBookingScoped && (
+        <div
+          className={`chat-sidebar ${activeConversation ? 'hide-on-mobile' : ''}`}
+          style={{
+            width: '320px',
+            minWidth: '280px',
+            borderRight: '1px solid var(--color-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'var(--color-bg-subtle)'
+          }}
+        >
         {/* Header & Search */}
         <div style={{ padding: '1.25rem 1rem 0.75rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -733,6 +777,7 @@ export default function ChatInterface({ role = 'customer' }) {
           )}
         </div>
       </div>
+      )}
 
       {/* =========================================================================
           RIGHT PANE: ACTIVE THREAD CHAT WINDOW
@@ -758,22 +803,24 @@ export default function ChatInterface({ role = 'customer' }) {
               backgroundColor: 'var(--color-bg-card)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Back button on mobile */}
-                <button
-                  type="button"
-                  onClick={() => setActiveConversation(null)}
-                  className="show-on-mobile btn-icon"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '0.4rem',
-                    cursor: 'pointer',
-                    color: 'var(--color-text-muted)'
-                  }}
-                  aria-label="Back to conversations"
-                >
-                  <ArrowLeft size={18} />
-                </button>
+                {/* Back button on mobile (standalone mode only) */}
+                {!effectiveIsBookingScoped && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveConversation(null)}
+                    className="show-on-mobile btn-icon"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '0.4rem',
+                      cursor: 'pointer',
+                      color: 'var(--color-text-muted)'
+                    }}
+                    aria-label="Back to conversations"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
 
                 {/* Avatar */}
                 <div style={{ position: 'relative' }}>
@@ -869,6 +916,29 @@ export default function ChatInterface({ role = 'customer' }) {
                     </div>
                   ) : null}
                 </div>
+              )}
+
+              {/* Close Button when inside Modal Dialog */}
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close chat window"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.4rem',
+                    cursor: 'pointer',
+                    color: 'var(--color-text-muted)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: '0.75rem'
+                  }}
+                >
+                  <X size={20} />
+                </button>
               )}
             </div>
 
@@ -1046,6 +1116,31 @@ export default function ChatInterface({ role = 'customer' }) {
               </form>
             )}
           </>
+        ) : loadingConversations ? (
+          <div style={{ textAlign: 'center', margin: 'auto', padding: '3rem 2rem', color: 'var(--color-text-muted)' }}>
+            <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-600)', margin: '0 auto 1rem' }} />
+            <h4 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)', marginBottom: '0.35rem' }}>
+              Opening Booking Chat...
+            </h4>
+            <p style={{ fontSize: '0.85rem' }}>
+              Connecting to secure conversation and message history.
+            </p>
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', margin: 'auto', padding: '3rem 2rem', color: 'var(--color-text-muted)' }}>
+            <AlertCircle size={32} style={{ color: 'var(--color-danger)', margin: '0 auto 1rem' }} />
+            <h4 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)', marginBottom: '0.35rem' }}>
+              Chat Unavailable
+            </h4>
+            <p style={{ fontSize: '0.85rem', maxWidth: '380px', margin: '0 auto 1.5rem', color: 'var(--color-text-muted)' }}>
+              {error}
+            </p>
+            {onClose && (
+              <button type="button" onClick={onClose} className="btn btn-outline btn-sm">
+                Close Chat
+              </button>
+            )}
+          </div>
         ) : (
           /* Empty State when no conversation selected */
           <div style={{ textAlign: 'center', margin: 'auto', padding: '3rem 2rem', color: 'var(--color-text-muted)' }}>

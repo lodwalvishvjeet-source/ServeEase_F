@@ -1,20 +1,23 @@
-import React from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import ChatInterface from '../components/chat/ChatInterface';
+import React, { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 /**
- * Customer Messages Page (/customer/messages)
- * Direct real-time messaging hub for consulting with service providers.
+ * Customer Messages Page
+ * Standalone messages section has been removed.
+ * Redirects to My Bookings, optionally opening the chat modal for the specified booking.
  */
 export default function CustomerMessages() {
-  return (
-    <DashboardLayout
-      title="Direct Technician Messages"
-      subtitle="Consult with booked service specialists regarding job scope, estimated arrival times, and diagnostic details"
-    >
-      <div className="customer-messages-content">
-        <ChatInterface role="customer" />
-      </div>
-    </DashboardLayout>
-  );
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingId = searchParams.get('bookingId') || searchParams.get('chatBookingId');
+
+  useEffect(() => {
+    if (bookingId) {
+      navigate(`/customer/bookings?chatBookingId=${encodeURIComponent(bookingId)}`, { replace: true });
+    } else {
+      navigate('/customer/bookings', { replace: true });
+    }
+  }, [navigate, bookingId]);
+
+  return null;
 }

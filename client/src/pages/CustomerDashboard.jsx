@@ -4,7 +4,6 @@ import {
   Search, 
   MapPin, 
   Calendar, 
-  MessageSquare, 
   User, 
   Compass, 
   ArrowRight, 
@@ -324,7 +323,7 @@ export default function CustomerDashboard() {
       </div>
 
       {/* 3. Quick Action Cards */}
-      <div className="grid-4" style={{ gap: '1.25rem', marginBottom: '2.5rem' }}>
+      <div className="grid-3" style={{ gap: '1.25rem', marginBottom: '2.5rem' }}>
         <Link 
           to={`/services?city=${activeCity}`} 
           id="customer-explore-services-card"
@@ -380,33 +379,6 @@ export default function CustomerDashboard() {
             </h3>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
               Track appointments
-            </p>
-          </div>
-        </Link>
-
-        <Link to="/customer/messages" className="card" style={{
-          padding: '1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.85rem',
-          textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-        }}>
-          <div style={{
-            padding: '0.75rem',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: '#fef3c7',
-            color: '#d97706'
-          }}>
-            <MessageSquare size={20} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={{ fontSize: '0.95rem', color: 'var(--color-text-title)', fontWeight: 600 }}>
-              Messages
-            </h3>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
-              Technician chats
             </p>
           </div>
         </Link>

@@ -9,7 +9,7 @@ import {
   ArrowRight, 
   Sparkles,
   Calendar,
-  MessageSquare,
+  Compass,
   User,
   RefreshCw,
   Lock,
@@ -807,8 +807,8 @@ function CustomerHomeView({ user }) {
             <ChevronRight size={18} style={{ color: 'var(--color-text-subtle)' }} />
           </Link>
 
-          {/* Quick Action: Direct Messages */}
-          <Link to="/customer/messages" className="card" style={{
+          {/* Quick Action: Discover Specialists */}
+          <Link to={`/services?city=${activeCity}`} className="card" style={{
             padding: '1.5rem',
             display: 'flex',
             alignItems: 'center',
@@ -820,17 +820,17 @@ function CustomerHomeView({ user }) {
             <div style={{
               padding: '0.85rem',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: '#e0f2fe',
-              color: '#0284c7'
+              backgroundColor: 'var(--color-bg-subtle)',
+              color: 'var(--primary-600)'
             }}>
-              <MessageSquare size={22} />
+              <Compass size={22} />
             </div>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)', marginBottom: '0.2rem' }}>
-                Messages
+                Discover Specialists
               </h3>
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>
-                Chat with technicians regarding repairs
+                Browse verified local trades in {activeCityName}
               </p>
             </div>
             <ChevronRight size={18} style={{ color: 'var(--color-text-subtle)' }} />

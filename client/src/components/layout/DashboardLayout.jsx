@@ -5,7 +5,6 @@ import {
   LayoutDashboard, 
   Compass, 
   Calendar, 
-  MessageSquare, 
   Bell, 
   User, 
   Briefcase, 
@@ -158,7 +157,6 @@ export default function DashboardLayout({ children, title, subtitle }) {
     { label: 'Dashboard', path: '/customer/dashboard', icon: <LayoutDashboard size={18} className="nav-icon" />, end: true },
     { label: 'Discover Services', path: `/services${servicesQuery}`, icon: <Compass size={18} className="nav-icon" /> },
     { label: 'My Bookings', path: '/customer/bookings', icon: <Calendar size={18} className="nav-icon" /> },
-    { label: 'Messages', path: '/customer/messages', icon: <MessageSquare size={18} className="nav-icon" /> },
     { label: 'Map & Location', path: '/customer/map', icon: <MapPin size={18} className="nav-icon" /> },
     { label: 'Notifications', path: '/customer/notifications', icon: <Bell size={18} className="nav-icon" /> },
     { label: 'My Profile', path: '/customer/profile', icon: <User size={18} className="nav-icon" /> }
@@ -170,7 +168,6 @@ export default function DashboardLayout({ children, title, subtitle }) {
     { label: 'Explore Directory', path: `/services${servicesQuery}`, icon: <Compass size={18} className="nav-icon" /> },
     { label: 'Booking Requests', path: '/provider/requests', icon: <Inbox size={18} className="nav-icon" /> },
     { label: 'My Bookings', path: '/provider/bookings', icon: <Calendar size={18} className="nav-icon" /> },
-    { label: 'Messages', path: '/provider/messages', icon: <MessageSquare size={18} className="nav-icon" /> },
     { label: 'Map & Location', path: '/provider/map', icon: <MapPin size={18} className="nav-icon" /> },
     { label: 'Notifications', path: '/provider/notifications', icon: <Bell size={18} className="nav-icon" /> },
     {
