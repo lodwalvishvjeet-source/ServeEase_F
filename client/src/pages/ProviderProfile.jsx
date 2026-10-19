@@ -525,9 +525,9 @@ export default function ProviderProfile() {
             </div>
 
             {/* Verification Status Card */}
-            <div className="card" style={{ padding: '1.5rem', backgroundColor: '#ffffff', border: '1px solid var(--color-border)' }}>
+            <div className="card" style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <ShieldCheck size={18} style={{ color: isVerified ? '#16a34a' : user?.providerDetails?.verificationStatus === 'rejected' ? '#dc2626' : '#d97706' }} />
+                <ShieldCheck size={18} style={{ color: isVerified ? 'var(--color-success)' : user?.providerDetails?.verificationStatus === 'rejected' ? 'var(--color-danger)' : 'var(--color-accent-gold)' }} />
                 <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-title)' }}>Verification Status</h3>
               </div>
 
@@ -539,8 +539,9 @@ export default function ProviderProfile() {
                     gap: '0.35rem',
                     padding: '0.3rem 0.7rem',
                     borderRadius: 'var(--radius-full)',
-                    backgroundColor: '#dcfce7',
-                    color: '#166534',
+                    backgroundColor: 'var(--color-success-bg)',
+                    color: 'var(--color-success)',
+                    border: '1px solid var(--color-border)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     marginBottom: '0.5rem'
@@ -560,8 +561,9 @@ export default function ProviderProfile() {
                     gap: '0.35rem',
                     padding: '0.3rem 0.7rem',
                     borderRadius: 'var(--radius-full)',
-                    backgroundColor: '#fee2e2',
-                    color: '#991b1b',
+                    backgroundColor: 'var(--color-danger-bg)',
+                    color: 'var(--color-danger)',
+                    border: '1px solid var(--color-border)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     marginBottom: '0.5rem'
@@ -569,9 +571,9 @@ export default function ProviderProfile() {
                     <ShieldAlert size={14} />
                     <span>Verification Rejected</span>
                   </div>
-                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#991b1b', display: 'block' }}>Rejection Reason:</span>
-                    <span style={{ fontSize: '0.8rem', color: '#7f1d1d' }}>{user?.providerDetails?.rejectionReason || 'Uploaded documents did not meet verification criteria.'}</span>
+                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-danger-bg)', borderRadius: '6px', border: '1px solid var(--color-border)', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-danger)', display: 'block' }}>Rejection Reason:</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-body)' }}>{user?.providerDetails?.rejectionReason || 'Uploaded documents did not meet verification criteria.'}</span>
                   </div>
                   <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
                     Please upload valid replacement documents to submit for re-review.
@@ -585,8 +587,9 @@ export default function ProviderProfile() {
                     gap: '0.35rem',
                     padding: '0.3rem 0.7rem',
                     borderRadius: 'var(--radius-full)',
-                    backgroundColor: '#fef3c7',
-                    color: '#92400e',
+                    backgroundColor: 'var(--color-accent-gold-bg)',
+                    color: 'var(--color-accent-gold)',
+                    border: '1px solid var(--color-border)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     marginBottom: '0.5rem'
@@ -1271,9 +1274,9 @@ export default function ProviderProfile() {
                     other: 'Other Credential'
                   };
                   const statusConfig = {
-                    approved: { label: 'Approved', bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
-                    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#991b1b', icon: ShieldAlert },
-                    pending: { label: 'Pending Review', bg: '#fef3c7', color: '#92400e', icon: Clock }
+                    approved: { label: 'Approved', bg: 'var(--color-success-bg)', color: 'var(--color-success)', icon: CheckCircle2 },
+                    rejected: { label: 'Rejected', bg: 'var(--color-danger-bg)', color: 'var(--color-danger)', icon: ShieldAlert },
+                    pending: { label: 'Pending Review', bg: 'var(--color-accent-gold-bg)', color: 'var(--color-accent-gold)', icon: Clock }
                   };
                   const sc = statusConfig[doc.status] || statusConfig.pending;
                   const StatusIcon = sc.icon;
@@ -1289,7 +1292,7 @@ export default function ProviderProfile() {
                         padding: '0.85rem 1rem',
                         borderRadius: 'var(--radius-md)',
                         border: '1px solid var(--color-border)',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--color-bg-card)',
                         flexWrap: 'wrap',
                         gap: '0.75rem'
                       }}
@@ -1307,6 +1310,7 @@ export default function ProviderProfile() {
                             fontWeight: 700,
                             padding: '0.15rem 0.5rem',
                             borderRadius: 'var(--radius-full)',
+                            border: '1px solid var(--color-border)',
                             backgroundColor: sc.bg,
                             color: sc.color
                           }}>
@@ -1318,7 +1322,7 @@ export default function ProviderProfile() {
                           {doc.originalFilename} • {formatFileSize(doc.fileSize)} • Uploaded {new Date(doc.createdAt).toLocaleDateString()}
                         </p>
                         {doc.rejectionReason && (
-                          <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#991b1b' }}>
+                          <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--color-danger)' }}>
                             <strong>Reason:</strong> {doc.rejectionReason}
                           </p>
                         )}
@@ -1339,7 +1343,7 @@ export default function ProviderProfile() {
                             type="button"
                             onClick={() => handleDeleteDocument(docId)}
                             className="btn btn-outline btn-sm"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#dc2626', borderColor: '#fecaca' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--color-danger)', borderColor: 'var(--color-border)' }}
                           >
                             <Trash2 size={13} /> Delete
                           </button>

@@ -96,9 +96,9 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
     justifyContent: 'space-between',
     padding: '1.25rem',
     borderRadius: 'var(--radius-lg)',
-    backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+    backgroundColor: isSelected ? 'var(--primary-50)' : 'var(--color-bg-card)',
     border: `2px solid ${isSelected ? 'var(--primary-600)' : 'var(--color-border)'}`,
-    boxShadow: isSelected ? '0 4px 14px rgba(22, 163, 74, 0.18)' : 'var(--shadow-xs)',
+    boxShadow: isSelected ? '0 4px 14px rgba(22, 163, 74, 0.18)' : 'var(--shadow-card)',
     cursor: 'pointer',
     transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
     position: 'relative',
@@ -149,9 +149,9 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
               fontWeight: 600,
               padding: '0.15rem 0.45rem',
               borderRadius: 'var(--radius-full)',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
-              border: '1px solid #e2e8f0'
+              backgroundColor: 'var(--color-bg-subtle)',
+              color: 'var(--color-text-muted)',
+              border: '1px solid var(--color-border)'
             }}>
               Active
             </span>
@@ -248,7 +248,7 @@ export function ServiceCardSkeleton() {
     <div style={{
       padding: '1.25rem',
       borderRadius: 'var(--radius-lg)',
-      backgroundColor: '#ffffff',
+      backgroundColor: 'var(--color-bg-card)',
       border: '1px solid var(--color-border)',
       display: 'flex',
       flexDirection: 'column',

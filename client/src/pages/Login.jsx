@@ -123,7 +123,7 @@ export default function Login() {
 
         {/* Validation Error Message */}
         {formError && (
-          <div className="alert-box" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', marginBottom: '1.25rem' }}>
+          <div className="alert-box alert-danger" style={{ marginBottom: '1.25rem' }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
             <span>{formError}</span>
           </div>
@@ -191,22 +191,16 @@ export default function Login() {
             </label>
           </div>
 
-          <Button type="submit" variant="primary" size="lg" block disabled={isLoading}>
-            {isLoading ? (
-              'Authenticating...'
-            ) : (
-              <>
-                <LogIn size={18} />
-                Sign In as {role === 'admin' ? 'Administrator' : role === 'provider' ? 'Provider' : 'Customer'}
-              </>
-            )}
+          <Button type="submit" variant="primary" size="lg" block disabled={isLoading} loading={isLoading}>
+            <LogIn size={18} />
+            Sign In as {role === 'admin' ? 'Administrator' : role === 'provider' ? 'Provider' : 'Customer'}
           </Button>
         </form>
 
         {/* Footer Links */}
         <div style={{ marginTop: '1.75rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
           Don't have an account yet?{' '}
-          <Link to="/register" style={{ color: 'var(--primary-700)', fontWeight: 700 }}>
+          <Link to="/register" style={{ color: 'var(--primary-600)', fontWeight: 600 }}>
             Register here
           </Link>
         </div>

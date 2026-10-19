@@ -525,8 +525,9 @@ export default function AdminDashboard() {
             width: '4rem',
             height: '4rem',
             borderRadius: 'var(--radius-lg)',
-            backgroundColor: '#fee2e2',
-            color: '#dc2626',
+            backgroundColor: 'var(--color-danger-bg)',
+            color: 'var(--color-danger)',
+            border: '1px solid var(--color-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -539,10 +540,10 @@ export default function AdminDashboard() {
               <h1 style={{ fontSize: '1.5rem', margin: 0, color: 'var(--color-text-title)' }}>
                 {user?.name || 'Platform Administrator'}
               </h1>
-              <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: 700 }}>
+              <span className="badge" style={{ backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid var(--color-border)', fontWeight: 700 }}>
                 System Admin
               </span>
-              <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+              <span className="badge" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-border)', fontWeight: 600 }}>
                 ● Active Status
               </span>
             </div>
@@ -563,7 +564,7 @@ export default function AdminDashboard() {
             <RefreshCw size={14} className={statsLoading ? 'animate-spin' : ''} />
             <span>Refresh Metrics</span>
           </button>
-          <Button variant="outline" size="sm" onClick={logout} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-danger)', borderColor: '#fca5a5' }}>
+          <Button variant="outline" size="sm" onClick={logout} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-danger)', borderColor: 'var(--color-border)' }}>
             <LogOut size={14} />
             <span>Sign Out</span>
           </Button>
@@ -618,8 +619,9 @@ export default function AdminDashboard() {
                   fontSize: '0.72rem',
                   padding: '0.1rem 0.45rem',
                   borderRadius: 'var(--radius-full)',
-                  backgroundColor: tab.id === 'providers' || tab.id === 'reviews' ? '#fef3c7' : '#f1f5f9',
-                  color: tab.id === 'providers' || tab.id === 'reviews' ? '#92400e' : '#475569',
+                  backgroundColor: tab.id === 'providers' || tab.id === 'reviews' ? 'var(--color-accent-gold-bg)' : 'var(--color-bg-subtle)',
+                  color: tab.id === 'providers' || tab.id === 'reviews' ? 'var(--color-accent-gold)' : 'var(--color-text-muted)',
+                  border: '1px solid var(--color-border)',
                   fontWeight: 700
                 }}>
                   {tab.badge}
@@ -642,7 +644,7 @@ export default function AdminDashboard() {
                 <Activity size={16} style={{ color: 'var(--primary-600)' }} />
                 <span>Analytics Window:</span>
               </span>
-              <div style={{ display: 'inline-flex', borderRadius: 'var(--radius-md)', backgroundColor: '#f1f5f9', padding: '3px', gap: '2px' }}>
+              <div style={{ display: 'inline-flex', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', padding: '3px', gap: '2px' }}>
                 {[
                   { id: '7d', label: '7 Days' },
                   { id: '30d', label: '30 Days' },
@@ -661,9 +663,9 @@ export default function AdminDashboard() {
                         fontWeight: isSelected ? 700 : 500,
                         border: 'none',
                         borderRadius: 'var(--radius-sm)',
-                        backgroundColor: isSelected ? '#ffffff' : 'transparent',
-                        color: isSelected ? 'var(--primary-700)' : 'var(--color-text-muted)',
-                        boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                        backgroundColor: isSelected ? 'var(--color-bg-card)' : 'transparent',
+                        color: isSelected ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                        boxShadow: isSelected ? 'var(--shadow-xs)' : 'none',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease'
                       }}

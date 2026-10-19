@@ -210,12 +210,12 @@ export default function CustomerProfile() {
                 <CheckCircle2 size={12} /> Active Account
               </span>
               {user?.emailVerified ? (
-                <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#166534', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span className="badge" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-border)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <CheckCircle2 size={12} /> Email Verified
                 </span>
               ) : (
                 <Link to="/verify-email" state={{ email: user?.email }} style={{ textDecoration: 'none' }}>
-                  <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="badge" style={{ backgroundColor: 'var(--color-accent-gold-bg)', color: 'var(--color-accent-gold)', border: '1px solid var(--color-border)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <AlertCircle size={12} /> Verify Email
                   </span>
                 </Link>
@@ -309,7 +309,7 @@ export default function CustomerProfile() {
                     id="phoneNumber"
                     name="phoneNumber"
                     className={`form-input ${phoneError ? 'form-input-error' : ''}`}
-                    style={phoneError ? { borderColor: '#dc2626', backgroundColor: '#fef2f2' } : {}}
+                    style={phoneError ? { borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-danger-bg)' } : {}}
                     value={formData.phoneNumber}
                     onChange={handleChange}
                     placeholder="e.g. 98765 43210 or +91 98765 43210"
@@ -325,7 +325,7 @@ export default function CustomerProfile() {
                         right: '12px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        color: '#dc2626',
+                        color: 'var(--color-danger)',
                         pointerEvents: 'none'
                       }}
                       aria-hidden="true"
@@ -340,7 +340,7 @@ export default function CustomerProfile() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.35rem',
-                      color: '#dc2626',
+                      color: 'var(--color-danger)',
                       fontSize: '0.82rem',
                       marginTop: '0.35rem',
                       fontWeight: 500

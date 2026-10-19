@@ -282,7 +282,7 @@ export default function ProviderRequests() {
                     alignItems: 'flex-start',
                     flexWrap: 'wrap',
                     gap: '1rem',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: '1px solid var(--color-border)',
                     paddingBottom: '1rem',
                     marginBottom: '1rem'
                   }}>
@@ -319,8 +319,9 @@ export default function ProviderRequests() {
                         borderRadius: 'var(--radius-full)',
                         fontSize: '0.78rem',
                         fontWeight: 700,
-                        backgroundColor: req.status === 'pending' ? '#fef3c7' : req.status === 'accepted' ? '#dbeafe' : '#f1f5f9',
-                        color: req.status === 'pending' ? '#92400e' : req.status === 'accepted' ? '#1e40af' : '#475569'
+                        backgroundColor: req.status === 'pending' ? 'var(--color-accent-gold-bg)' : req.status === 'accepted' ? 'var(--color-info-blue-bg)' : 'var(--color-bg-subtle)',
+                        color: req.status === 'pending' ? 'var(--color-accent-gold)' : req.status === 'accepted' ? 'var(--color-info-blue)' : 'var(--color-text-muted)',
+                        border: '1px solid var(--color-border)'
                       }}>
                         {req.status === 'pending' ? 'Pending Action' : req.status.toUpperCase()}
                       </span>
@@ -370,13 +371,13 @@ export default function ProviderRequests() {
                   {/* Customer Description */}
                   {req.description && (
                     <div style={{
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--color-bg-subtle)',
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       fontSize: '0.85rem',
                       color: 'var(--color-text-body)',
                       marginBottom: '1rem',
-                      border: '1px solid #e2e8f0'
+                      border: '1px solid var(--color-border)'
                     }}>
                       <strong>Customer Problem Notes:</strong> "{req.description}"
                     </div>
@@ -389,7 +390,7 @@ export default function ProviderRequests() {
                       justifyContent: 'flex-end',
                       alignItems: 'center',
                       gap: '0.75rem',
-                      borderTop: '1px solid #f1f5f9',
+                      borderTop: '1px solid var(--color-border)',
                       paddingTop: '0.85rem',
                       flexWrap: 'wrap'
                     }}>
@@ -401,7 +402,7 @@ export default function ProviderRequests() {
                           setRejectReason('');
                         }}
                         className="btn btn-outline btn-sm"
-                        style={{ color: 'var(--color-danger)', borderColor: '#fca5a5' }}
+                        style={{ color: 'var(--color-danger)', borderColor: 'var(--color-border)' }}
                       >
                         <X size={15} /> Decline Request
                       </button>
@@ -446,7 +447,7 @@ export default function ProviderRequests() {
               style={{
                 width: '100%',
                 maxWidth: '460px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--color-bg-card)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '1.75rem',
                 boxShadow: 'var(--shadow-xl)'

@@ -49,7 +49,6 @@ export default function Home() {
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite'
         }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         <p style={{ color: 'var(--color-text-muted)' }}>Loading your ServeEase workspace...</p>
       </div>
     );

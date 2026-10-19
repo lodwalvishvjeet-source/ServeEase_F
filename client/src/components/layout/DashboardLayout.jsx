@@ -432,7 +432,7 @@ export default function DashboardLayout({ children, title, subtitle }) {
                     justifyContent: 'center',
                     padding: '0 4px',
                     lineHeight: 1,
-                    border: '2px solid #ffffff'
+                    border: '2px solid var(--color-bg-card)'
                   }}
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}

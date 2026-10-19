@@ -192,7 +192,7 @@ export default function Register() {
 
         {/* Validation or API Error Box */}
         {errorMessage && (
-          <div className="alert-box" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', marginBottom: '1.25rem' }}>
+          <div className="alert-box alert-danger" style={{ marginBottom: '1.25rem' }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
             <span>{errorMessage}</span>
           </div>
@@ -307,7 +307,7 @@ export default function Register() {
               padding: '1.25rem',
               marginBottom: '1.25rem'
             }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-800)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-600)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Briefcase size={16} /> Service Provider Profile
               </h3>
 
@@ -448,22 +448,16 @@ export default function Register() {
             </label>
           </div>
 
-          <Button type="submit" variant="primary" size="lg" block disabled={isLoading}>
-            {isLoading ? (
-              'Creating Account...'
-            ) : (
-              <>
-                <UserPlus size={18} />
-                Create {role === 'customer' ? 'Customer' : 'Provider'} Account
-              </>
-            )}
+          <Button type="submit" variant="primary" size="lg" block disabled={isLoading} loading={isLoading}>
+            <UserPlus size={18} />
+            Create {role === 'customer' ? 'Customer' : 'Provider'} Account
           </Button>
         </form>
 
         {/* Footer Link */}
         <div style={{ marginTop: '1.75rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--primary-700)', fontWeight: 700 }}>
+          <Link to="/login" style={{ color: 'var(--primary-600)', fontWeight: 600 }}>
             Sign In
           </Link>
         </div>

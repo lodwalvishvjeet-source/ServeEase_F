@@ -92,9 +92,11 @@ export default function ResetPassword() {
 
         <form onSubmit={handleSubmit} noValidate>
           {(!location.state?.email || !location.state?.resetToken) && (
-            <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: '6px', background: '#fef3c7', color: '#92400e', fontSize: '0.85rem' }}>
-              No active recovery token detected. If you haven't received a code yet,{' '}
-              <Link to="/forgot-password" style={{ color: '#b45309', fontWeight: 600 }}>request a new code</Link>.
+            <div className="alert-box alert-warning" style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
+              <span>
+                No active recovery token detected. If you haven't received a code yet,{' '}
+                <Link to="/forgot-password" style={{ color: 'var(--color-accent-gold)', fontWeight: 600, textDecoration: 'underline' }}>request a new code</Link>.
+              </span>
             </div>
           )}
 
@@ -134,21 +136,14 @@ export default function ResetPassword() {
           <Button
             type="submit"
             variant="primary"
-            className="w-full"
+            size="lg"
+            block
             disabled={isLoading || !newPassword || !confirmPassword}
-            style={{ width: '100%', marginBottom: '1.25rem', padding: '0.75rem' }}
+            loading={isLoading}
+            style={{ marginBottom: '1.25rem' }}
           >
-            {isLoading ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Loader2 size={18} className="animate-spin" />
-                Resetting Password...
-              </span>
-            ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Lock size={18} />
-                Update Password
-              </span>
-            )}
+            <Lock size={18} />
+            Update Password
           </Button>
         </form>
 

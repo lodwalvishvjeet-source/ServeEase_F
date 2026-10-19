@@ -177,21 +177,14 @@ export default function VerifyEmail() {
           <Button
             type="submit"
             variant="primary"
-            className="w-full"
+            size="lg"
+            block
             disabled={isLoading || otp.length !== 6}
-            style={{ width: '100%', marginBottom: '1.25rem', padding: '0.75rem' }}
+            loading={isLoading}
+            style={{ marginBottom: '1.25rem' }}
           >
-            {isLoading ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Loader2 size={18} className="animate-spin" />
-                Verifying Email...
-              </span>
-            ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MailCheck size={18} />
-                Verify & Complete Registration
-              </span>
-            )}
+            <MailCheck size={18} />
+            Verify & Complete Registration
           </Button>
         </form>
 

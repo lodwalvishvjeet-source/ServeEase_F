@@ -671,23 +671,23 @@ export default function CustomerBookings() {
                     <div
                       id={`service-completed-banner-${b._id}`}
                       style={{
-                        backgroundColor: '#f0fdf4',
+                        backgroundColor: 'var(--color-success-bg)',
                         padding: '0.75rem 1rem',
                         borderRadius: 'var(--radius-md)',
                         fontSize: '0.88rem',
-                        color: '#166534',
+                        color: 'var(--color-success)',
                         marginBottom: '1rem',
-                        border: '1px solid #bbf7d0',
+                        border: '1px solid var(--color-border)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.6rem'
                       }}
                     >
-                      <CheckCircle2 size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <CheckCircle2 size={18} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
                       <div>
                         <strong>Service Completed</strong>
                         {b.completedAt && (
-                          <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#15803d' }}>
+                          <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: 'var(--color-success)' }}>
                             — finished on {new Date(b.completedAt).toLocaleDateString()} at {new Date(b.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
@@ -700,7 +700,7 @@ export default function CustomerBookings() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    borderTop: '1px solid #f1f5f9',
+                    borderTop: '1px solid var(--color-border)',
                     paddingTop: '0.85rem',
                     flexWrap: 'wrap',
                     gap: '0.75rem'
@@ -721,7 +721,7 @@ export default function CustomerBookings() {
                           className="btn btn-outline btn-sm"
                           style={{
                             color: 'var(--color-danger)',
-                            borderColor: '#fca5a5'
+                            borderColor: 'var(--color-border)'
                           }}
                         >
                           <XCircle size={14} /> Cancel Appointment
@@ -891,15 +891,15 @@ export default function CustomerBookings() {
                             onClick={() => setViewingReview(myReviews[b._id])}
                             className="btn btn-outline btn-sm"
                             style={{
-                              color: '#b45309',
-                              borderColor: '#fde68a',
-                              backgroundColor: '#fffbeb',
+                              color: 'var(--color-accent-gold)',
+                              borderColor: 'var(--color-border)',
+                              backgroundColor: 'var(--color-accent-gold-bg)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.35rem'
                             }}
                           >
-                            <Star size={14} fill="#d97706" stroke="#d97706" />
+                            <Star size={14} fill="var(--color-accent-gold)" stroke="var(--color-accent-gold)" />
                             <span>Rated {myReviews[b._id].rating}★ (View)</span>
                           </button>
                         ) : (
@@ -1231,22 +1231,22 @@ export default function CustomerBookings() {
                 alignItems: 'center',
                 gap: '0.4rem',
                 marginBottom: '1rem',
-                backgroundColor: '#fffbeb',
+                backgroundColor: 'var(--color-accent-gold-bg)',
                 padding: '0.75rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid #fde68a'
+                border: '1px solid var(--color-border)'
               }}>
                 <div style={{ display: 'flex', gap: '2px' }}>
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Star
                       key={s}
                       size={18}
-                      fill={s <= viewingReview.rating ? '#d97706' : '#e2e8f0'}
-                      stroke={s <= viewingReview.rating ? '#d97706' : '#cbd5e1'}
+                      fill={s <= viewingReview.rating ? 'var(--color-accent-gold)' : 'var(--color-border)'}
+                      stroke={s <= viewingReview.rating ? 'var(--color-accent-gold)' : 'var(--color-border)'}
                     />
                   ))}
                 </div>
-                <strong style={{ marginLeft: '0.5rem', color: '#92400e', fontSize: '0.95rem' }}>
+                <strong style={{ marginLeft: '0.5rem', color: 'var(--color-accent-gold)', fontSize: '0.95rem' }}>
                   {viewingReview.rating} out of 5 stars
                 </strong>
               </div>

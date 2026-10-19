@@ -231,8 +231,8 @@ export default function CustomerDashboard() {
       {/* Pending Email Verification Banner */}
       {!user?.emailVerified && (
         <div style={{
-          backgroundColor: '#fffbeb',
-          border: '1px solid #fde68a',
+          backgroundColor: 'var(--color-accent-gold-bg)',
+          border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-lg)',
           padding: '1.25rem',
           marginBottom: '2rem',
@@ -243,18 +243,18 @@ export default function CustomerDashboard() {
           gap: '1rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <AlertCircle size={22} style={{ color: '#d97706', flexShrink: 0 }} />
+            <AlertCircle size={22} style={{ color: 'var(--color-accent-gold)', flexShrink: 0 }} />
             <div>
-              <p style={{ margin: 0, fontWeight: 700, color: '#92400e', fontSize: '0.98rem' }}>
+              <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-title)', fontSize: '0.98rem' }}>
                 Email Verification Required for Bookings
               </p>
-              <p style={{ margin: 0, color: '#b45309', fontSize: '0.88rem' }}>
+              <p style={{ margin: 0, color: 'var(--color-text-body)', fontSize: '0.88rem' }}>
                 You can browse local services and technicians, but your email address must be verified before requesting appointments.
               </p>
             </div>
           </div>
           <Link to="/verify-email" state={{ email: user?.email }}>
-            <Button variant="primary" size="sm" style={{ backgroundColor: '#d97706', borderColor: '#d97706' }}>
+            <Button variant="primary" size="sm" style={{ backgroundColor: 'var(--color-accent-gold)', borderColor: 'var(--color-accent-gold)' }}>
               Verify Email Now
             </Button>
           </Link>
@@ -355,20 +355,19 @@ export default function CustomerDashboard() {
           </div>
         </Link>
 
-        <Link to="/customer/bookings" className="card" style={{
+        <Link to="/customer/bookings" className="card card-hoverable" style={{
           padding: '1.25rem',
           display: 'flex',
           alignItems: 'center',
           gap: '0.85rem',
           textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+          color: 'inherit'
         }}>
           <div style={{
             padding: '0.75rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: '#e0f2fe',
-            color: '#0284c7'
+            backgroundColor: 'var(--color-info-blue-bg)',
+            color: 'var(--color-info-blue)'
           }}>
             <Calendar size={20} />
           </div>
@@ -382,20 +381,19 @@ export default function CustomerDashboard() {
           </div>
         </Link>
 
-        <Link to="/customer/profile" className="card" style={{
+        <Link to="/customer/profile" className="card card-hoverable" style={{
           padding: '1.25rem',
           display: 'flex',
           alignItems: 'center',
           gap: '0.85rem',
           textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+          color: 'inherit'
         }}>
           <div style={{
             padding: '0.75rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: '#f1f5f9',
-            color: '#475569'
+            backgroundColor: 'var(--color-bg-subtle)',
+            color: 'var(--color-text-body)'
           }}>
             <User size={20} />
           </div>
@@ -416,7 +414,7 @@ export default function CustomerDashboard() {
           <h2 style={{ fontSize: '1.35rem', color: 'var(--color-text-title)' }}>
             Popular Service Categories in {activeCityName}
           </h2>
-          <Link to={`/services?city=${activeCity}`} style={{ fontSize: '0.88rem', color: 'var(--primary-700)', fontWeight: 600 }}>
+          <Link to={`/services?city=${activeCity}`} style={{ fontSize: '0.88rem', color: 'var(--primary-600)', fontWeight: 600 }}>
             Browse All in Discover Services →
           </Link>
         </div>
@@ -426,11 +424,10 @@ export default function CustomerDashboard() {
             <div
               key={cat.id}
               onClick={() => navigate(`/services?city=${activeCity}&category=${encodeURIComponent(cat.name)}`)}
-              className="card"
+              className="card card-hoverable"
               style={{
                 padding: '1.25rem',
                 cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.5rem'

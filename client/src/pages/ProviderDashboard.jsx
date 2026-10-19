@@ -169,8 +169,8 @@ export default function ProviderDashboard() {
       <div className="card" id="availability" style={{
         padding: '1.75rem',
         marginBottom: '2rem',
-        backgroundColor: '#ffffff',
-        borderLeft: `4px solid ${isAvailable ? 'var(--primary-600)' : '#94a3b8'}`,
+        backgroundColor: 'var(--color-bg-card)',
+        borderLeft: `4px solid ${isAvailable ? 'var(--primary-600)' : 'var(--color-text-muted)'}`,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -183,20 +183,20 @@ export default function ProviderDashboard() {
             <span style={{
               fontSize: '0.8rem',
               fontWeight: 600,
-              color: isAvailable ? '#15803d' : '#64748b',
-              backgroundColor: isAvailable ? '#f0fdf4' : '#f1f5f9',
+              color: isAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
+              backgroundColor: isAvailable ? 'var(--color-success-bg)' : 'var(--color-bg-subtle)',
               padding: '0.2rem 0.6rem',
               borderRadius: 'var(--radius-full)',
-              border: `1px solid ${isAvailable ? '#bbf7d0' : '#cbd5e1'}`
+              border: `1px solid var(--color-border)`
             }}>
               ● {isAvailable ? 'Taking Jobs' : 'Offline / Busy'}
             </span>
             {availFeedback && (
               <span style={{
                 fontSize: '0.82rem',
-                color: availFeedback.type === 'error' ? '#991b1b' : '#15803d',
-                backgroundColor: availFeedback.type === 'error' ? '#fee2e2' : '#dcfce7',
-                border: `1px solid ${availFeedback.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
+                color: availFeedback.type === 'error' ? 'var(--color-danger)' : 'var(--color-success)',
+                backgroundColor: availFeedback.type === 'error' ? 'var(--color-danger-bg)' : 'var(--color-success-bg)',
+                border: '1px solid var(--color-border)',
                 padding: '0.2rem 0.6rem',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: 600,
@@ -231,7 +231,7 @@ export default function ProviderDashboard() {
               padding: '0.65rem 1.25rem',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              backgroundColor: isTogglingAvail ? '#94a3b8' : (isAvailable ? '#15803d' : '#64748b'),
+              backgroundColor: isTogglingAvail ? 'var(--color-text-muted)' : (isAvailable ? 'var(--primary-600)' : 'var(--color-text-muted)'),
               color: '#ffffff',
               fontWeight: 600,
               fontSize: '0.92rem',
@@ -259,38 +259,40 @@ export default function ProviderDashboard() {
       {/* 2. Key Metrics & Progress */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
         {/* Profile Completion Meter */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
-              Profile Completion
-            </h3>
-            <span style={{ fontWeight: 700, color: score >= 80 ? 'var(--primary-600)' : '#d97706', fontSize: '1.1rem' }}>
-              {score}%
-            </span>
-          </div>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
+                Profile Completion
+              </h3>
+              <span style={{ fontWeight: 700, color: score >= 80 ? 'var(--primary-600)' : 'var(--color-accent-gold)', fontSize: '1.1rem' }}>
+                {score}%
+              </span>
+            </div>
 
-          <div style={{
-            width: '100%',
-            height: '8px',
-            backgroundColor: 'var(--color-bg-subtle)',
-            borderRadius: 'var(--radius-full)',
-            overflow: 'hidden',
-            marginBottom: '1rem'
-          }}>
             <div style={{
-              width: `${score}%`,
-              height: '100%',
-              backgroundColor: score >= 80 ? 'var(--primary-600)' : '#f59e0b',
+              width: '100%',
+              height: '8px',
+              backgroundColor: 'var(--color-bg-subtle)',
               borderRadius: 'var(--radius-full)',
-              transition: 'width 0.4s ease'
-            }} />
-          </div>
+              overflow: 'hidden',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: `${score}%`,
+                height: '100%',
+                backgroundColor: score >= 80 ? 'var(--primary-600)' : 'var(--color-accent-gold)',
+                borderRadius: 'var(--radius-full)',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
 
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '1rem' }}>
-            {score < 100
-              ? 'Complete your service catalog and pricing to increase customer inquiries.'
-              : 'Your business profile is fully configured and ready for customer discovery!'}
-          </p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+              {score < 100
+                ? 'Complete your service catalog and pricing to increase customer inquiries.'
+                : 'Your business profile is fully configured and ready for customer discovery!'}
+            </p>
+          </div>
 
           <Button to="/provider/profile" variant="outline" size="sm" block>
             Edit Business Profile
@@ -298,43 +300,45 @@ export default function ProviderDashboard() {
         </div>
 
         {/* Customer Rating & Reputation */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <Star size={20} style={{ color: '#d97706' }} />
-            <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
-              Rating & Reputation
-            </h3>
-          </div>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <Star size={20} style={{ color: 'var(--color-accent-gold)' }} />
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
+                Rating & Reputation
+              </h3>
+            </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.35rem' }}>
-            {reviewStats.averageRating != null && reviewStats.reviewCount > 0 ? (
-              <>
-                <span style={{ fontSize: '2rem', fontWeight: 800, color: '#d97706', fontFamily: 'var(--font-family-heading)' }}>
-                  {Number(reviewStats.averageRating).toFixed(1)}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.35rem' }}>
+              {reviewStats.averageRating != null && reviewStats.reviewCount > 0 ? (
+                <>
+                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-accent-gold)', fontFamily: 'var(--font-family-heading)' }}>
+                    {Number(reviewStats.averageRating).toFixed(1)}
+                  </span>
+                  <span style={{ display: 'flex', gap: '2px' }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        size={14}
+                        fill={s <= Math.round(reviewStats.averageRating) ? 'var(--color-accent-gold)' : 'var(--color-border)'}
+                        stroke={s <= Math.round(reviewStats.averageRating) ? 'var(--color-accent-gold)' : 'var(--color-border)'}
+                      />
+                    ))}
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                  No reviews yet
                 </span>
-                <span style={{ display: 'flex', gap: '2px' }}>
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      size={14}
-                      fill={s <= Math.round(reviewStats.averageRating) ? '#d97706' : '#e2e8f0'}
-                      stroke={s <= Math.round(reviewStats.averageRating) ? '#d97706' : '#cbd5e1'}
-                    />
-                  ))}
-                </span>
-              </>
-            ) : (
-              <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-                No reviews yet
-              </span>
-            )}
-          </div>
+              )}
+            </div>
 
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '1rem' }}>
-            {reviewStats.reviewCount > 0
-              ? `Calculated from ${reviewStats.reviewCount} verified completed job${reviewStats.reviewCount > 1 ? 's' : ''}.`
-              : 'Ratings are calculated exclusively from verified completed bookings.'}
-          </p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+              {reviewStats.reviewCount > 0
+                ? `Calculated from ${reviewStats.reviewCount} verified completed job${reviewStats.reviewCount > 1 ? 's' : ''}.`
+                : 'Ratings are calculated exclusively from verified completed bookings.'}
+            </p>
+          </div>
 
           <a
             href="#customer-reviews-section"
@@ -346,22 +350,24 @@ export default function ProviderDashboard() {
         </div>
 
         {/* Territory & City Coverage */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <MapPin size={20} style={{ color: 'var(--primary-600)' }} />
-            <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
-              Service Territory
-            </h3>
-          </div>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <MapPin size={20} style={{ color: 'var(--primary-600)' }} />
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
+                Service Territory
+              </h3>
+            </div>
 
-          <div style={{ marginBottom: '0.65rem' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Primary City</span>
-            <p style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-title)' }}>{city}</p>
-          </div>
+            <div style={{ marginBottom: '0.65rem' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Primary City</span>
+              <p style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-title)' }}>{city}</p>
+            </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Localities Covered</span>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-body)' }}>{serviceArea}</p>
+            <div style={{ marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Localities Covered</span>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-body)' }}>{serviceArea}</p>
+            </div>
           </div>
 
           <Button to="/provider/profile" variant="outline" size="sm" block>
@@ -370,22 +376,24 @@ export default function ProviderDashboard() {
         </div>
 
         {/* Consultation Pricing Structure */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <Briefcase size={20} style={{ color: 'var(--primary-600)' }} />
-            <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
-              Pricing Rates
-            </h3>
-          </div>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <Briefcase size={20} style={{ color: 'var(--primary-600)' }} />
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--color-text-title)' }}>
+                Pricing Rates
+              </h3>
+            </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--color-border)' }}>
-            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>Doorstep Consultation:</span>
-            <strong style={{ color: 'var(--color-text-title)' }}>{startingPrice > 0 ? `₹${startingPrice}` : 'On Inspection'}</strong>
-          </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--color-border)' }}>
+              <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>Doorstep Consultation:</span>
+              <strong style={{ color: 'var(--color-text-title)' }}>{startingPrice > 0 ? `₹${startingPrice}` : 'On Inspection'}</strong>
+            </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>Labor Rate / Hour:</span>
-            <strong style={{ color: 'var(--color-text-title)' }}>{hourlyRate > 0 ? `₹${hourlyRate}/hr` : 'Standard'}</strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>Labor Rate / Hour:</span>
+              <strong style={{ color: 'var(--color-text-title)' }}>{hourlyRate > 0 ? `₹${hourlyRate}/hr` : 'Standard'}</strong>
+            </div>
           </div>
 
           <Button to="/provider/profile" variant="outline" size="sm" block>
@@ -523,9 +531,9 @@ export default function ProviderDashboard() {
                 key={rev._id || rev.id}
                 style={{
                   padding: '1.25rem',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--color-bg-subtle)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid #e2e8f0'
+                  border: '1px solid var(--color-border)'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -534,7 +542,7 @@ export default function ProviderDashboard() {
                       {rev.customer?.name || 'Verified Client'}
                     </strong>
                     {rev.serviceName && (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--primary-700)', backgroundColor: '#eff6ff', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 500 }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-info-blue)', backgroundColor: 'var(--color-info-blue-bg)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 500 }}>
                         {rev.serviceName}
                       </span>
                     )}
@@ -593,14 +601,13 @@ export default function ProviderDashboard() {
 
       {/* 5. Quick Business Actions Grid */}
       <div className="grid-3" style={{ gap: '1.5rem' }}>
-        <Link to="/provider/services" className="card" style={{
+        <Link to="/provider/services" className="card card-hoverable" style={{
           padding: '1.5rem',
           display: 'flex',
           alignItems: 'center',
           gap: '1rem',
           textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s ease'
+          color: 'inherit'
         }}>
           <div style={{
             padding: '0.85rem',
@@ -620,20 +627,19 @@ export default function ProviderDashboard() {
           </div>
         </Link>
 
-        <Link to="/provider/requests" className="card" style={{
+        <Link to="/provider/requests" className="card card-hoverable" style={{
           padding: '1.5rem',
           display: 'flex',
           alignItems: 'center',
           gap: '1rem',
           textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s ease'
+          color: 'inherit'
         }}>
           <div style={{
             padding: '0.85rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: '#e0f2fe',
-            color: '#0284c7'
+            backgroundColor: 'var(--color-info-blue-bg)',
+            color: 'var(--color-info-blue)'
           }}>
             <Inbox size={22} />
           </div>
@@ -647,20 +653,19 @@ export default function ProviderDashboard() {
           </div>
         </Link>
 
-        <Link to="/provider/profile" className="card" style={{
+        <Link to="/provider/profile" className="card card-hoverable" style={{
           padding: '1.5rem',
           display: 'flex',
           alignItems: 'center',
           gap: '1rem',
           textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s ease'
+          color: 'inherit'
         }}>
           <div style={{
             padding: '0.85rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: '#fef3c7',
-            color: '#d97706'
+            backgroundColor: 'var(--color-accent-gold-bg)',
+            color: 'var(--color-accent-gold)'
           }}>
             <Settings size={22} />
           </div>

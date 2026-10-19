@@ -77,7 +77,6 @@ export default function Contact() {
 
   return (
     <div className="contact-page section-spacing">
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div className="container">
         <SectionHeading
           eyebrow="Get In Touch"
@@ -100,8 +99,9 @@ export default function Contact() {
                     width: '3.5rem',
                     height: '3.5rem',
                     borderRadius: '50%',
-                    backgroundColor: '#dcfce7',
-                    color: '#16a34a',
+                    backgroundColor: 'var(--color-success-bg)',
+                    color: 'var(--color-success)',
+                    border: '1px solid var(--color-border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -130,9 +130,9 @@ export default function Contact() {
                 {/* Client-side validation alert */}
                 {clientError && (
                   <div
-                    className="alert-box"
+                    className="alert-box alert-danger"
                     role="alert"
-                    style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', marginBottom: '1.25rem' }}
+                    style={{ marginBottom: '1.25rem' }}
                   >
                     <AlertCircle size={18} style={{ flexShrink: 0 }} />
                     <span>{clientError}</span>
@@ -142,9 +142,9 @@ export default function Contact() {
                 {/* Formspree form-level error alert */}
                 <ValidationError
                   errors={state.errors}
-                  className="alert-box"
+                  className="alert-box alert-danger"
                   role="alert"
-                  style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', marginBottom: '1.25rem' }}
+                  style={{ marginBottom: '1.25rem' }}
                 />
 
                 <div className="form-group">
@@ -256,17 +256,9 @@ export default function Contact() {
                   size="lg"
                   block
                   disabled={state.submitting}
+                  loading={state.submitting}
                 >
-                  {state.submitting ? (
-                    <>
-                      <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send size={16} /> Submit Message
-                    </>
-                  )}
+                  <Send size={16} /> Submit Message
                 </Button>
               </form>
             )}
