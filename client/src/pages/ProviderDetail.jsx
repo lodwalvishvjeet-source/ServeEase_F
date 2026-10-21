@@ -210,23 +210,23 @@ export default function ProviderDetail() {
                   gap: '0.35rem',
                   fontSize: '0.78rem',
                   fontWeight: 600,
-                  padding: '0.2rem 0.6rem',
+                  padding: '0.25rem 0.65rem',
                   borderRadius: 'var(--radius-full)',
-                  backgroundColor: isAvailable ? '#dcfce7' : '#f1f5f9',
-                  color: isAvailable ? '#15803d' : '#64748b',
-                  border: `1px solid ${isAvailable ? '#86efac' : '#cbd5e1'}`
+                  backgroundColor: isAvailable ? 'var(--color-success-bg)' : 'var(--color-bg-subtle)',
+                  color: isAvailable ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                  border: `1px solid ${isAvailable ? 'var(--primary-600)' : 'var(--color-border)'}`
                 }}>
                   <span style={{
                     width: '7px',
                     height: '7px',
                     borderRadius: '50%',
-                    backgroundColor: isAvailable ? '#16a34a' : '#94a3b8'
+                    backgroundColor: isAvailable ? 'var(--primary-600)' : 'var(--color-text-subtle)'
                   }} />
                   {isAvailable ? 'Available Now' : 'Currently Busy'}
                 </span>
               </div>
 
-              <p style={{ fontSize: '1.05rem', color: 'var(--primary-700)', fontWeight: 600, marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '1.05rem', color: 'var(--color-text-title)', fontWeight: 600, marginBottom: '0.75rem' }}>
                 {provider.title || provider.category}
               </p>
 
@@ -270,7 +270,7 @@ export default function ProviderDetail() {
         </div>
 
         {/* 2-Column Content Layout: Left Details / Right Booking Actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1.2fr)', gap: '2rem' }}>
+        <div className="provider-detail-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1.2fr)', gap: '2rem' }}>
           {/* Left Column: Bio, Offered Services & Reviews */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {/* Bio Card */}
@@ -417,7 +417,7 @@ export default function ProviderDetail() {
                         <div>
                           <strong style={{ color: 'var(--color-text-title)' }}>{rev.customer?.name || 'Verified Customer'}</strong>
                           {rev.serviceName && (
-                            <span style={{ fontSize: '0.78rem', color: 'var(--primary-700)', marginLeft: '0.5rem', backgroundColor: '#eff6ff', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--primary-600)', marginLeft: '0.5rem', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
                               {rev.serviceName}
                             </span>
                           )}
@@ -475,7 +475,7 @@ export default function ProviderDetail() {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginTop: '0.35rem' }}>
                   {provider.startingPrice && Number(provider.startingPrice) > 0 ? (
                     <>
-                      <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary-700)', fontFamily: 'var(--font-family-heading)' }}>
+                      <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary-600)', fontFamily: 'var(--font-family-heading)' }}>
                         ₹{provider.startingPrice}
                       </span>
                       <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>/ visit charge</span>

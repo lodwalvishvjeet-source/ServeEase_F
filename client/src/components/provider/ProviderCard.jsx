@@ -61,13 +61,13 @@ export default function ProviderCard({ provider }) {
             {isDemo && (
               <span
                 style={{
-                  fontSize: '0.68rem',
+                  fontSize: 'var(--font-size-xs, 0.75rem)',
                   fontWeight: 600,
-                  padding: '0.1rem 0.4rem',
-                  borderRadius: '4px',
-                  backgroundColor: '#f1f5f9',
-                  color: '#64748b',
-                  border: '1px solid #e2e8f0'
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  color: 'var(--color-text-muted)',
+                  border: '1px solid var(--color-border)'
                 }}
                 title="Sample demonstration profile for academic testing"
               >
@@ -82,13 +82,13 @@ export default function ProviderCard({ provider }) {
             {hasReviews ? (
               <>
                 <span className="rating-star-badge">
-                  <Star size={12} fill="#d97706" stroke="#d97706" />
+                  <Star size={12} fill="var(--color-accent-gold)" stroke="var(--color-accent-gold)" />
                   {Number(provider.rating).toFixed(1)}
                 </span>
-                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>({provider.reviewCount} reviews)</span>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm, 0.84rem)' }}>({provider.reviewCount} reviews)</span>
               </>
             ) : (
-              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm, 0.82rem)' }}>
                 {isDemo ? 'Unrated demo profile' : 'New professional'}
               </span>
             )}
@@ -96,7 +96,7 @@ export default function ProviderCard({ provider }) {
             {provider.experienceYears !== undefined && provider.experienceYears !== null && (
               <>
                 <span style={{ color: 'var(--color-text-subtle)' }}>•</span>
-                <span style={{ color: 'var(--primary-700)', fontWeight: 600, fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--primary-700)', fontWeight: 600, fontSize: 'var(--font-size-sm, 0.84rem)' }}>
                   {provider.experienceYears} yrs exp
                 </span>
               </>
@@ -166,19 +166,19 @@ export default function ProviderCard({ provider }) {
               <span 
                 key={idx} 
                 style={{
-                  fontSize: '0.73rem',
+                  fontSize: 'var(--font-size-xs, 0.76rem)',
                   fontWeight: 600,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '12px',
-                  backgroundColor: '#ecfdf5',
-                  color: '#065f46',
-                  border: '1px solid #a7f3d0',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: 'var(--radius-full, 9999px)',
+                  backgroundColor: 'var(--primary-50)',
+                  color: 'var(--primary-800)',
+                  border: '1px solid var(--primary-100)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.25rem'
+                  gap: '0.3rem'
                 }}
               >
-                <CheckCircle2 size={11} style={{ color: '#059669', flexShrink: 0 }} />
+                <CheckCircle2 size={12} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
                 <span>{reason}</span>
               </span>
             ))}

@@ -471,12 +471,12 @@ export default function CustomerBookings() {
                             {b.serviceName}
                           </h4>
                           {b.category && (
-                            <span style={{ fontSize: '0.72rem', backgroundColor: 'var(--color-bg-subtle)', padding: '0.15rem 0.5rem', borderRadius: '4px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                            <span style={{ fontSize: 'var(--font-size-xs, 0.76rem)', backgroundColor: 'var(--color-bg-subtle)', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)', color: 'var(--color-text-muted)', fontWeight: 600, border: '1px solid var(--color-border)' }}>
                               {b.category}
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
+                        <div style={{ fontSize: 'var(--font-size-sm, 0.88rem)', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
                           Technician: <strong style={{ color: 'var(--color-text-body)' }}>{providerObj.name || 'Assigned Technician'}</strong>
                           {providerObj.phoneNumber && (
                             <span style={{ marginLeft: '0.75rem', color: 'var(--primary-700)' }}>
@@ -490,8 +490,8 @@ export default function CustomerBookings() {
 
                     {/* Status Badge */}
                     <div className={`badge ${statusBadge.className}`} style={{
-                      padding: '0.35rem 0.85rem',
-                      fontSize: '0.8rem',
+                      padding: '0.3rem 0.8rem',
+                      fontSize: 'var(--font-size-xs, 0.78rem)',
                       fontWeight: 700
                     }}>
                       <span style={{

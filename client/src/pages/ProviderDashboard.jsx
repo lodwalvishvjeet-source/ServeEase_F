@@ -210,10 +210,10 @@ export default function ProviderDashboard() {
             )}
           </div>
 
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--color-text-title)', marginBottom: '0.25rem' }}>
+          <h1 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 1.85rem)', color: 'var(--color-text-title)', marginBottom: '0.25rem', fontWeight: 800 }}>
             {user?.name || 'Technician'} — {category}
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.92rem' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-base, 0.9375rem)' }}>
             Serving <strong>{serviceArea}</strong>, {city} • {experienceYears} years experience
           </p>
         </div>
@@ -360,13 +360,13 @@ export default function ProviderDashboard() {
             </div>
 
             <div style={{ marginBottom: '0.65rem' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Primary City</span>
+              <span style={{ fontSize: 'var(--font-size-2xs, 0.74rem)', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Primary City</span>
               <p style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-title)' }}>{city}</p>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Localities Covered</span>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-body)' }}>{serviceArea}</p>
+              <span style={{ fontSize: 'var(--font-size-2xs, 0.74rem)', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Localities Covered</span>
+              <p style={{ fontSize: 'var(--font-size-base, 0.925rem)', color: 'var(--color-text-body)' }}>{serviceArea}</p>
             </div>
           </div>
 

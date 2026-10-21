@@ -177,15 +177,15 @@ export default function CustomerDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span className="badge badge-primary">Customer Account</span>
             {cityFeedback && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--primary-700)', fontWeight: 600 }}>
+              <span style={{ fontSize: 'var(--font-size-xs, 0.78rem)', color: 'var(--primary-700)', fontWeight: 600 }}>
                 ✓ {cityFeedback}
               </span>
             )}
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--color-text-title)', marginBottom: '0.2rem' }}>
+          <h1 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 1.85rem)', color: 'var(--color-text-title)', marginBottom: '0.25rem', fontWeight: 800 }}>
             Welcome back, {user?.name || 'Customer'} 👋
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.92rem' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-base, 0.9375rem)' }}>
             Book trusted local technicians and manage home repairs in <strong>{activeCityName}</strong>.
           </p>
         </div>
@@ -202,7 +202,7 @@ export default function CustomerDashboard() {
         }}>
           <MapPin size={18} style={{ color: 'var(--primary-600)' }} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor="customer-city-select" style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <label htmlFor="customer-city-select" style={{ fontSize: 'var(--font-size-2xs, 0.72rem)', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Service Hub
             </label>
             <select
@@ -214,7 +214,7 @@ export default function CustomerDashboard() {
                 border: 'none',
                 background: 'transparent',
                 fontWeight: 700,
-                fontSize: '0.95rem',
+                fontSize: 'var(--font-size-base, 0.95rem)',
                 color: 'var(--color-text-title)',
                 cursor: 'pointer',
                 outline: 'none'

@@ -44,7 +44,7 @@ export default function About() {
             </div>
 
             <div style={{ backgroundColor: 'var(--color-bg-page)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary-700)' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--color-text-title)' }}>
                 Key Project Principles
               </h3>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.92rem' }}>
@@ -79,7 +79,7 @@ export default function About() {
 
           <div className="grid-4">
             <div className="card">
-              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-info-blue-bg)', color: 'var(--color-info-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <Code2 size={24} />
               </div>
               <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>React 19 & Vite</h3>
@@ -89,7 +89,7 @@ export default function About() {
             </div>
 
             <div className="card">
-              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#f0fdf4', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-success-bg)', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <Layers size={24} />
               </div>
               <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>Node.js & Express</h3>
@@ -99,7 +99,7 @@ export default function About() {
             </div>
 
             <div className="card">
-              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fefce8', color: '#a16207', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-accent-gold-bg)', color: 'var(--color-accent-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <Database size={24} />
               </div>
               <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>MongoDB & Mongoose</h3>
@@ -109,7 +109,7 @@ export default function About() {
             </div>
 
             <div className="card">
-              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#faf5ff', color: '#7e22ce', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-purple-bg)', color: 'var(--color-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <GraduationCap size={24} />
               </div>
               <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>Full Stack Architecture</h3>

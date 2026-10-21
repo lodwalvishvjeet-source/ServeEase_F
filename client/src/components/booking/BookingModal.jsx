@@ -60,7 +60,7 @@ export default function BookingModal({ provider, isOpen, onClose, onSuccess }) {
   const [step, setStep] = useState('form'); // 'form' | 'confirm' | 'success'
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [createdBooking, setCreatedBooking] = useState(null);
+  const [_createdBooking, setCreatedBooking] = useState(null);
 
   // Recalculate available slots dynamically in Asia/Kolkata timezone
   const availableSlots = React.useMemo(() => {

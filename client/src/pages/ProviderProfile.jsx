@@ -458,7 +458,7 @@ export default function ProviderProfile() {
           </div>
         )}
 
-        <div className="grid-2" style={{ gridTemplateColumns: '1fr 2.2fr', gap: '2rem', alignItems: 'start' }}>
+        <div className="profile-grid">
           {/* Left Column: Public Badge & Security Sidebar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Account Card */}
@@ -492,8 +492,9 @@ export default function ProviderProfile() {
                 gap: '0.4rem',
                 padding: '0.35rem 0.8rem',
                 borderRadius: 'var(--radius-full)',
-                backgroundColor: formData.isAvailable ? '#f0fdf4' : '#fef2f2',
-                color: formData.isAvailable ? '#15803d' : '#991b1b',
+                backgroundColor: formData.isAvailable ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                color: formData.isAvailable ? 'var(--primary-600)' : 'var(--color-danger)',
+                border: `1px solid ${formData.isAvailable ? 'var(--primary-600)' : 'var(--color-danger)'}`,
                 fontWeight: 700,
                 fontSize: '0.8rem',
                 marginBottom: '1.25rem'

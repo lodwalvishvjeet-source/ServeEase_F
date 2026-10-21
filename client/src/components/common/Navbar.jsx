@@ -220,19 +220,19 @@ export default function Navbar() {
                       gap: '0.35rem',
                       padding: '0.3rem 0.65rem',
                       borderRadius: 'var(--radius-full)',
-                      backgroundColor: isProviderAvailable ? '#f0fdf4' : '#f8fafc',
-                      color: isProviderAvailable ? '#15803d' : '#64748b',
-                      fontSize: '0.8rem',
+                      backgroundColor: isProviderAvailable ? 'var(--color-success-bg)' : 'var(--color-bg-subtle)',
+                      color: isProviderAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
+                      fontSize: 'var(--font-size-xs, 0.8rem)',
                       fontWeight: 600,
                       textDecoration: 'none',
-                      border: `1px solid ${isProviderAvailable ? '#bbf7d0' : '#e2e8f0'}`
+                      border: '1px solid var(--color-border)'
                     }}
                   >
                     <span style={{
                       width: '7px',
                       height: '7px',
                       borderRadius: '50%',
-                      backgroundColor: isProviderAvailable ? '#16a34a' : '#94a3b8'
+                      backgroundColor: isProviderAvailable ? 'var(--color-success)' : 'var(--color-text-subtle)'
                     }} />
                     <span>{isProviderAvailable ? 'Taking Jobs' : 'Unavailable'}</span>
                   </Link>

@@ -1280,17 +1280,17 @@ export default function AdminDashboard() {
                     No city distribution data recorded yet.
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                  <div className="table-responsive-container">
+                    <table className="data-table">
                       <thead>
-                        <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>City / Service Hub</th>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>Registered Users</th>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>Technicians</th>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>Verified Badge Ratio</th>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>Total Bookings</th>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>Completed Jobs</th>
-                          <th style={{ padding: '0.75rem 0.5rem' }}>Platform Volume</th>
+                        <tr>
+                          <th>City / Service Hub</th>
+                          <th>Registered Users</th>
+                          <th>Technicians</th>
+                          <th>Verified Badge Ratio</th>
+                          <th>Total Bookings</th>
+                          <th>Completed Jobs</th>
+                          <th>Platform Volume</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1458,16 +1458,16 @@ export default function AdminDashboard() {
               <p style={{ margin: 0 }}>No users found matching the selected filter criteria.</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+            <div className="table-responsive-container">
+              <table className="data-table">
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Name & Email</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Role</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>City</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Status</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Registered</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Actions</th>
+                  <tr>
+                    <th>Name & Email</th>
+                    <th>Role</th>
+                    <th>City</th>
+                    <th>Status</th>
+                    <th>Registered</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1475,32 +1475,25 @@ export default function AdminDashboard() {
                     const isSelf = user?._id === u._id;
                     const isSuspended = u.status === 'suspended';
                     return (
-                      <tr key={u._id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                      <tr key={u._id}>
+                        <td>
                           <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{u.name}</strong>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{u.email}</span>
+                          <span style={{ fontSize: 'var(--font-size-xs, 0.78rem)', color: 'var(--color-text-muted)' }}>{u.email}</span>
                         </td>
-                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <td>
                           <span className={`badge ${u.role === 'admin' ? 'badge-prototype' : u.role === 'provider' ? 'badge-primary' : ''}`}>
                             {u.role}
                           </span>
                         </td>
-                        <td style={{ padding: '0.75rem 0.5rem', color: 'var(--color-text-body)' }}>
+                        <td style={{ color: 'var(--color-text-body)' }}>
                           {u.cityName || u.city || '—'}
                         </td>
-                        <td style={{ padding: '0.75rem 0.5rem' }}>
-                          <span style={{
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: 'var(--radius-full)',
-                            backgroundColor: isSuspended ? '#fee2e2' : '#dcfce7',
-                            color: isSuspended ? '#991b1b' : '#166534'
-                          }}>
+                        <td>
+                          <span className={`badge ${isSuspended ? 'badge-cancelled' : 'badge-completed'}`}>
                             {isSuspended ? 'Suspended' : 'Active'}
                           </span>
                         </td>
-                        <td style={{ padding: '0.75rem 0.5rem', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                        <td style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm, 0.82rem)' }}>
                           {new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </td>
                         <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
@@ -1565,7 +1558,7 @@ export default function AdminDashboard() {
               </table>
 
               {/* Pagination Bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                   Page {usersPage} of {usersTotalPages} ({usersTotal} records)
                 </span>
@@ -1861,62 +1854,52 @@ export default function AdminDashboard() {
               <p style={{ margin: 0 }}>No bookings found matching selected filters.</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+            <div className="table-responsive-container">
+              <table className="data-table">
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Service & Schedule</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Customer</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Provider</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>City & Locality</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Status</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Price</th>
+                  <tr>
+                    <th>Service & Schedule</th>
+                    <th>Customer</th>
+                    <th>Provider</th>
+                    <th>City & Locality</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Price</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bookings.map((b) => (
-                    <tr key={b._id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                    <tr key={b._id}>
+                      <td>
                         <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{b.serviceName}</strong>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                        <span style={{ fontSize: 'var(--font-size-xs, 0.78rem)', color: 'var(--color-text-muted)' }}>
                           {b.bookingDate} at {b.bookingTime}
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                      <td>
                         <span style={{ color: 'var(--color-text-body)' }}>{b.customer?.name || 'Customer'}</span>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>{b.customer?.email}</div>
+                        <div style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>{b.customer?.email}</div>
                       </td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                      <td>
                         <span style={{ color: 'var(--color-text-body)' }}>{b.provider?.name || 'Provider'}</span>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>{b.provider?.providerDetails?.title || b.category}</div>
+                        <div style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>{b.provider?.providerDetails?.title || b.category}</div>
                       </td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                      <td>
                         <div>{b.cityName || b.city}</div>
-                        <span style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
+                        <span style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>
                           {b.serviceAddressMasked}
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
-                        <span style={{
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: 'var(--radius-full)',
-                          backgroundColor:
-                            b.status === 'completed' ? '#dcfce7' :
-                            b.status === 'in_progress' ? '#f3e8ff' :
-                            b.status === 'accepted' ? '#dbeafe' :
-                            b.status === 'pending' ? '#fef3c7' : '#fee2e2',
-                          color:
-                            b.status === 'completed' ? '#166534' :
-                            b.status === 'in_progress' ? '#6b21a8' :
-                            b.status === 'accepted' ? '#1e40af' :
-                            b.status === 'pending' ? '#92400e' : '#991b1b'
-                        }}>
-                          {b.status}
+                      <td>
+                        <span className={`badge ${
+                          b.status === 'completed' ? 'badge-completed' :
+                          b.status === 'in_progress' ? 'badge-in-progress' :
+                          b.status === 'accepted' ? 'badge-accepted' :
+                          b.status === 'pending' ? 'badge-pending' : 'badge-cancelled'
+                        }`} style={{ textTransform: 'capitalize' }}>
+                          {b.status?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-text-title)' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text-title)' }}>
                         ₹{b.price}
                       </td>
                     </tr>
@@ -2153,43 +2136,44 @@ export default function AdminDashboard() {
               <p style={{ margin: 0 }}>No administrative actions recorded yet.</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <div className="table-responsive-container">
+              <table className="data-table">
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left', color: 'var(--color-text-muted)' }}>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Timestamp</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Admin</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Action</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Target</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Documented Reason</th>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Admin</th>
+                    <th>Action</th>
+                    <th>Target</th>
+                    <th>Documented Reason</th>
                   </tr>
                 </thead>
                 <tbody>
                   {auditLogs.map((log) => (
-                    <tr key={log._id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '0.65rem 0.5rem', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
+                    <tr key={log._id}>
+                      <td style={{ whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>
                         {new Date(log.createdAt).toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '0.65rem 0.5rem' }}>
+                      <td>
                         <strong style={{ color: 'var(--color-text-title)' }}>{log.adminName || log.adminEmail}</strong>
                       </td>
-                      <td style={{ padding: '0.65rem 0.5rem' }}>
+                      <td>
                         <code style={{
-                          backgroundColor: '#f1f5f9',
-                          padding: '0.2rem 0.4rem',
-                          borderRadius: '4px',
-                          color: '#0f172a',
+                          backgroundColor: 'var(--color-bg-subtle, #f1f5f9)',
+                          padding: '0.2rem 0.45rem',
+                          borderRadius: 'var(--radius-sm, 4px)',
+                          color: 'var(--color-text-title, #0f172a)',
                           fontWeight: 600,
-                          fontSize: '0.78rem'
+                          fontSize: '0.78rem',
+                          border: '1px solid var(--color-border)'
                         }}>
                           {log.action}
                         </code>
                       </td>
-                      <td style={{ padding: '0.65rem 0.5rem' }}>
-                        <span style={{ fontWeight: 600 }}>{log.targetType}</span>
+                      <td>
+                        <span style={{ fontWeight: 600, color: 'var(--color-text-title)' }}>{log.targetType}</span>
                         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>ID: {log.targetId}</div>
                       </td>
-                      <td style={{ padding: '0.65rem 0.5rem', color: 'var(--color-text-body)' }}>
+                      <td style={{ color: 'var(--color-text-body)' }}>
                         {log.reason || '—'}
                       </td>
                     </tr>
@@ -2198,7 +2182,7 @@ export default function AdminDashboard() {
               </table>
 
               {/* Pagination */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                   Page {auditPage} of {auditTotalPages} ({auditTotal} entries)
                 </span>

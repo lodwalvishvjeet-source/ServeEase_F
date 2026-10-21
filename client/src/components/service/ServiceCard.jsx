@@ -145,9 +145,9 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
             </span>
           ) : (
             <span style={{
-              fontSize: '0.7rem',
+              fontSize: 'var(--font-size-xs, 0.76rem)',
               fontWeight: 600,
-              padding: '0.15rem 0.45rem',
+              padding: '0.2rem 0.55rem',
               borderRadius: 'var(--radius-full)',
               backgroundColor: 'var(--color-bg-subtle)',
               color: 'var(--color-text-muted)',
@@ -159,7 +159,7 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
         </div>
 
         <h3 style={{
-          fontSize: '1.05rem',
+          fontSize: 'var(--font-size-md, 1.05rem)',
           fontWeight: 700,
           color: isSelected ? 'var(--primary-800)' : 'var(--color-text-title)',
           marginBottom: '0.35rem'
@@ -168,9 +168,9 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
         </h3>
 
         <p style={{
-          fontSize: '0.82rem',
+          fontSize: 'var(--font-size-sm, 0.85rem)',
           color: 'var(--color-text-muted)',
-          lineHeight: 1.45,
+          lineHeight: 1.5,
           marginBottom: '1rem',
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -187,11 +187,11 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
         justifyContent: 'space-between',
         paddingTop: '0.75rem',
         borderTop: '1px solid var(--color-border)',
-        fontSize: '0.82rem'
+        fontSize: 'var(--font-size-sm, 0.85rem)'
       }}>
         <div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-subtle)', display: 'block' }}>Starts from</span>
-          <span style={{ fontWeight: 800, color: 'var(--primary-700)', fontSize: '0.95rem' }}>
+          <span style={{ fontSize: 'var(--font-size-xs, 0.75rem)', color: 'var(--color-text-subtle)', display: 'block' }}>Starts from</span>
+          <span style={{ fontWeight: 800, color: 'var(--primary-700)', fontSize: '1rem' }}>
             ₹{category.startingPrice || 299}
           </span>
         </div>
@@ -199,10 +199,10 @@ export default function ServiceCard({ category, isSelected = false, onSelect }) 
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.2rem',
+          gap: '0.25rem',
           color: isSelected ? 'var(--primary-700)' : 'var(--color-text-body)',
           fontWeight: 600,
-          fontSize: '0.78rem'
+          fontSize: 'var(--font-size-sm, 0.82rem)'
         }}>
           <span>Explore</span>
           <ChevronRight size={14} />

@@ -181,7 +181,7 @@ export default function CustomerProfile() {
           </div>
         )}
 
-        <div className="grid-2" style={{ gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
+        <div className="profile-grid">
           {/* Left Column: Account Summary Card */}
           <div className="card" style={{ padding: '1.75rem', textAlign: 'center' }}>
             <div style={{

@@ -162,18 +162,18 @@ function PublicLandingView() {
             </div>
 
             <h1 style={{
-              fontSize: '3rem',
+              fontSize: 'clamp(2rem, 5vw, 3rem)',
               fontWeight: 800,
               lineHeight: 1.15,
               color: '#ffffff',
               marginBottom: '1.25rem',
-              letterSpacing: '-0.02em'
+              letterSpacing: 'var(--tracking-tight, -0.025em)'
             }}>
               Trusted Local Services, Right at Your Doorstep
             </h1>
 
             <p style={{
-              fontSize: '1.2rem',
+              fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
               color: 'rgba(255, 255, 255, 0.9)',
               marginBottom: '2.5rem',
               lineHeight: 1.6,
@@ -188,12 +188,11 @@ function PublicLandingView() {
               backgroundColor: 'var(--color-bg-card)',
               borderRadius: 'var(--radius-lg)',
               padding: '0.75rem',
-              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.3)',
-              color: 'var(--color-text-body)'
+              boxShadow: 'var(--shadow-xl)',
+              color: 'var(--color-text-body)',
+              border: '1px solid var(--color-border)'
             }}>
-              <form onSubmit={handleHeroSearch} style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(180px, 1.2fr) minmax(220px, 2fr) auto',
+              <form onSubmit={handleHeroSearch} className="search-inputs-grid" style={{
                 gap: '0.75rem',
                 alignItems: 'center'
               }}>
@@ -492,8 +491,8 @@ function PublicLandingView() {
             {/* Visual Trust Box */}
             <div className="card" style={{
               padding: '2.5rem',
-              backgroundColor: 'var(--primary-50)',
-              border: '1px solid var(--primary-100)',
+              backgroundColor: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-lg)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -506,12 +505,12 @@ function PublicLandingView() {
                   <Lock size={24} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', color: 'var(--primary-900)' }}>Account Required for Booking</h3>
-                  <p style={{ color: 'var(--primary-700)', fontSize: '0.85rem' }}>Protecting both customers and technicians</p>
+                  <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-title)' }}>Account Required for Booking</h3>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Protecting both customers and technicians</p>
                 </div>
               </div>
 
-              <p style={{ color: 'var(--primary-800)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+              <p style={{ color: 'var(--color-text-body)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '2rem' }}>
                 Public visitors can freely browse technician catalogs and standard rates. To initiate a booking or message a provider, sign in to your ServeEase account.
               </p>
 
@@ -519,7 +518,7 @@ function PublicLandingView() {
                 <Button to="/login" variant="primary">
                   Sign In to Book
                 </Button>
-                <Button to="/register" variant="outline" style={{ borderColor: 'var(--primary-600)', color: 'var(--primary-700)' }}>
+                <Button to="/register" variant="outline">
                   Create Customer Account
                 </Button>
               </div>

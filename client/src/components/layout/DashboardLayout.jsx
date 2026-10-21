@@ -241,7 +241,7 @@ export default function DashboardLayout({ children, title, subtitle }) {
         {/* Role Badge Subheader */}
         <div style={{ padding: '0.75rem 1.25rem 0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{
-            fontSize: '0.72rem',
+            fontSize: 'var(--font-size-xs, 0.78rem)',
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -250,8 +250,8 @@ export default function DashboardLayout({ children, title, subtitle }) {
             {user?.role === 'provider' ? 'Provider Workspace' : user?.role === 'admin' ? 'Admin Workspace' : 'Customer Workspace'}
           </span>
           <span className={`badge ${user?.role === 'provider' ? 'badge-warning' : user?.role === 'admin' ? 'badge-prototype' : 'badge-primary'}`} style={{
-            fontSize: '0.7rem',
-            padding: '0.1rem 0.45rem',
+            fontSize: 'var(--font-size-xs, 0.76rem)',
+            padding: '0.15rem 0.5rem',
             textTransform: 'capitalize'
           }}>
             {user?.role}
@@ -282,8 +282,8 @@ export default function DashboardLayout({ children, title, subtitle }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                     <span>{item.label}</span>
                     <span className={`badge ${isAvailable ? 'badge-completed' : 'badge-rejected'}`} style={{
-                      fontSize: '0.72rem',
-                      padding: '0.1rem 0.45rem'
+                      fontSize: 'var(--font-size-xs, 0.76rem)',
+                      padding: '0.15rem 0.5rem'
                     }}>
                       {isAvailable ? 'Taking Jobs' : 'Offline'}
                     </span>
@@ -418,14 +418,14 @@ export default function DashboardLayout({ children, title, subtitle }) {
                 <span
                   style={{
                     position: 'absolute',
-                    top: '-3px',
-                    right: '-3px',
-                    backgroundColor: '#ef4444',
+                    top: '-4px',
+                    right: '-4px',
+                    backgroundColor: 'var(--color-danger)',
                     color: '#ffffff',
-                    fontSize: '0.65rem',
+                    fontSize: 'var(--font-size-2xs, 0.72rem)',
                     fontWeight: 700,
-                    minWidth: '16px',
-                    height: '16px',
+                    minWidth: '18px',
+                    height: '18px',
                     borderRadius: '9999px',
                     display: 'flex',
                     alignItems: 'center',

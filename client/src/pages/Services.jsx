@@ -644,12 +644,7 @@ export default function Services() {
         </div>
 
         {/* Search, City & Sort Bar */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(200px, 1.2fr) minmax(260px, 2.5fr) minmax(180px, 1fr)',
-          gap: '0.75rem',
-          alignItems: 'center'
-        }}>
+        <div className="filter-bar-grid">
           {/* City Selector */}
           <div style={{
             display: 'flex',
@@ -735,13 +730,7 @@ export default function Services() {
         </div>
 
         {/* Smart Matching Quick Filter Row */}
-        <div style={{
-          marginTop: '0.9rem',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(180px, 1.5fr) minmax(130px, 1fr) minmax(130px, 1fr)',
-          gap: '0.75rem',
-          alignItems: 'center'
-        }}>
+        <div className="filter-sub-grid">
           {/* Locality / Area Filter Autocomplete */}
           <Autocomplete
             id="discover-area-filter-input"
