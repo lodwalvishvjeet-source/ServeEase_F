@@ -3,6 +3,7 @@ import {
   register,
   login,
   logout,
+  refreshToken,
   getMe,
   forgotPassword,
   verifyOtp,
@@ -31,6 +32,7 @@ router.post('/resend-email-otp', otpLimiter, resendEmailVerificationOtp);
 /**
  * Session Lifecycle Endpoints
  */
+router.post('/refresh', refreshToken);
 router.post('/logout', logout);
 router.get('/me', authenticate, getMe);
 

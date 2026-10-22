@@ -1,22 +1,49 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { authApi, userApi } from '../services/api';
 
 const AuthContext = createContext(null);
+
+// Inactivity threshold: 15 minutes of zero user actions
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+
+// Record user activity timestamp (throttled)
+const recordUserActivity = () => {
+  const now = Date.now();
+  try {
+    const last = parseInt(localStorage.getItem('serveease_last_activity') || '0', 10);
+    // Throttle writes to localStorage every 3 seconds
+    if (now - last > 3000) {
+      localStorage.setItem('serveease_last_activity', String(now));
+    }
+  } catch {
+    // ignore storage access errors
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   /**
-   * Check current session on application mount
+   * Check current session on application mount or background verification
    */
-  const checkAuthStatus = useCallback(async () => {
+  const checkAuthStatus = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await authApi.getMe();
       if (data && data.success && data.user) {
-        setUser(data.user);
+        setUser((prev) => {
+          if (prev && prev._id === data.user._id && prev.updatedAt === data.user.updatedAt) {
+            return prev;
+          }
+          return data.user;
+        });
       } else {
         setUser(null);
       }
@@ -24,12 +51,101 @@ export const AuthProvider = ({ children }) => {
       // 401 or network error indicates unauthenticated guest state
       setUser(null);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
+  /**
+   * Logout and terminate current session
+   */
+  const logout = useCallback(async (reason = null) => {
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.warn('Logout API request error:', err.message);
+    } finally {
+      setUser(null);
+      try {
+        localStorage.removeItem('serveease_last_activity');
+      } catch {
+        // ignore
+      }
+      setAuthError(reason || null);
+    }
+  }, []);
+
+  const logoutRef = useRef(logout);
   useEffect(() => {
-    checkAuthStatus();
+    logoutRef.current = logout;
+  }, [logout]);
+
+  // Initial mount authentication check (runs strictly ONCE on mount)
+  useEffect(() => {
+    checkAuthStatus(false);
+  }, [checkAuthStatus]);
+
+  // Idle detection and activity tracking listeners
+  useEffect(() => {
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    const handleUserInteraction = () => {
+      recordUserActivity();
+    };
+
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, handleUserInteraction, { passive: true });
+    });
+
+    const handleIdleAndRenewal = () => {
+      if (!userRef.current) return;
+
+      let lastActivity = Date.now();
+      try {
+        const stored = localStorage.getItem('serveease_last_activity');
+        if (stored) {
+          lastActivity = parseInt(stored, 10);
+        }
+      } catch {
+        // ignore
+      }
+
+      const idleTime = Date.now() - lastActivity;
+
+      if (idleTime >= INACTIVITY_TIMEOUT_MS) {
+        logoutRef.current('You have been logged out due to 15 minutes of inactivity. Please sign in again.');
+      } else if (document.visibilityState === 'visible') {
+        checkAuthStatus(true);
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        handleIdleAndRenewal();
+      }
+    };
+
+    const handleSessionExpired = (e) => {
+      setUser(null);
+      if (e?.detail?.message) {
+        setAuthError(e.detail.message);
+      }
+    };
+
+    // Check idle status every 15 seconds
+    const intervalId = setInterval(handleIdleAndRenewal, 15000);
+
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+
+    return () => {
+      clearInterval(intervalId);
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, handleUserInteraction);
+      });
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('auth:session-expired', handleSessionExpired);
+    };
   }, [checkAuthStatus]);
 
   /**
@@ -43,6 +159,11 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data?.error || 'Authentication failed. Please verify your credentials.');
       }
       setUser(data.user);
+      try {
+        localStorage.setItem('serveease_last_activity', String(Date.now()));
+      } catch {
+        // ignore
+      }
       return data.user;
     } catch (err) {
       setAuthError(err.message);
@@ -67,20 +188,6 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       setAuthError(err.message);
       throw err;
-    }
-  };
-
-  /**
-   * Logout and terminate current session
-   */
-  const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch (err) {
-      console.warn('Logout API request error:', err.message);
-    } finally {
-      setUser(null);
-      setAuthError(null);
     }
   };
 

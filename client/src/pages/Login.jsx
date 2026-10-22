@@ -13,7 +13,7 @@ import { validateEmail } from '../utils/validation';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, authError } = useAuth();
 
   const [role, setRole] = useState('customer'); // 'customer' | 'provider' | 'admin'
   const [email, setEmail] = useState('');
@@ -121,11 +121,11 @@ export default function Login() {
           </button>
         </div>
 
-        {/* Validation Error Message */}
-        {formError && (
+        {/* Validation & Session Inactivity Error Message */}
+        {(formError || authError) && (
           <div className="alert-box alert-danger" style={{ marginBottom: '1.25rem' }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <span>{formError}</span>
+            <span>{formError || authError}</span>
           </div>
         )}
 

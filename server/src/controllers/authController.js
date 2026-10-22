@@ -4,37 +4,83 @@ import User from '../models/User.js';
 import PendingRegistration from '../models/PendingRegistration.js';
 import { normalizeCity, SUPPORTED_CITIES } from '../config/cities.js';
 import { validateEmail, validateIndianMobile } from '../utils/validation.js';
-import { getJwtSecret } from '../config/env.js';
+import { getJwtSecret, getJwtRefreshSecret } from '../config/env.js';
 import { sendEmail, isEmailConfigured } from '../utils/email.js';
 
 /**
- * JWT Token Generator
- * Signs user ID and role into the token with 24h expiration
+ * Helper to parse JWT expiration string into milliseconds for Cookie maxAge
+ */
+export const parseDurationToMs = (durationStr) => {
+  if (typeof durationStr === 'number') return durationStr * 1000;
+  if (!durationStr || typeof durationStr !== 'string') return 15 * 60 * 1000;
+  const match = durationStr.trim().match(/^(\d+)\s*(s|m|h|d)?$/);
+  if (!match) return 15 * 60 * 1000;
+  const val = parseInt(match[1], 10);
+  const unit = match[2] || 'm';
+  switch (unit) {
+    case 's': return val * 1000;
+    case 'm': return val * 60 * 1000;
+    case 'h': return val * 60 * 60 * 1000;
+    case 'd': return val * 24 * 60 * 60 * 1000;
+    default: return 15 * 60 * 1000;
+  }
+};
+
+/**
+ * JWT Access Token Generator
+ * Signs user ID and role into the token with configurable expiration (default: 15m)
  */
 export const generateToken = (userId, role) => {
   const secret = getJwtSecret();
+  const expiresIn = process.env.JWT_EXPIRES_IN || '15m';
   return jwt.sign(
     { userId, role },
     secret,
-    { expiresIn: '24h' }
+    { expiresIn }
   );
 };
 
 /**
- * Helper to set HttpOnly Cookie with security best practices
+ * JWT Refresh Token Generator
+ * Signs user ID and role into long-lived refresh token (default: 1d)
  */
-export const setAuthCookie = (res, token) => {
+export const generateRefreshToken = (userId, role) => {
+  const secret = getJwtRefreshSecret();
+  const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '1d';
+  return jwt.sign(
+    { userId, role, type: 'refresh' },
+    secret,
+    { expiresIn }
+  );
+};
+
+/**
+ * Helper to set HttpOnly Cookies with security best practices
+ */
+export const setAuthCookie = (res, token, refreshToken = null) => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const accessMaxAge = parseDurationToMs(process.env.JWT_EXPIRES_IN || '15m');
   res.cookie('token', token, {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: accessMaxAge
   });
+
+  if (refreshToken) {
+    const refreshMaxAge = parseDurationToMs(process.env.JWT_REFRESH_EXPIRES_IN || '1d');
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      maxAge: refreshMaxAge
+    });
+  }
 };
 
 /**
- * Helper to clear the Auth Cookie on logout
+ * Helper to clear the Auth Cookies on logout
  */
 export const clearAuthCookie = (res) => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -42,6 +88,12 @@ export const clearAuthCookie = (res) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax'
+  });
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/'
   });
 };
 
@@ -333,15 +385,17 @@ export const login = async (req, res, next) => {
       }
     }
 
-    // Issue JWT & set HttpOnly cookie with trusted database role
+    // Issue JWT Access Token & Refresh Token with HttpOnly cookies
     const token = generateToken(user._id, user.role);
-    setAuthCookie(res, token);
+    const refreshToken = generateRefreshToken(user._id, user.role);
+    setAuthCookie(res, token, refreshToken);
 
     return res.status(200).json({
       success: true,
       message: 'Signed in successfully.',
       user: user.toSafeObject(),
-      token
+      token,
+      refreshToken
     });
   } catch (error) {
     return next(error);
@@ -358,6 +412,84 @@ export const logout = (req, res) => {
     success: true,
     message: 'Signed out successfully.'
   });
+};
+
+/**
+ * POST /api/auth/refresh
+ * Exchange valid Refresh Token for a fresh Access Token (15m) and renewed Refresh Token (1d)
+ */
+export const refreshToken = async (req, res, next) => {
+  try {
+    let token = null;
+
+    if (req.cookies && req.cookies.refreshToken) {
+      token = req.cookies.refreshToken;
+    } else if (req.body && req.body.refreshToken) {
+      token = req.body.refreshToken;
+    } else if (req.headers && req.headers['x-refresh-token']) {
+      token = req.headers['x-refresh-token'];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Refresh token is required to renew session.',
+        code: 'NO_REFRESH_TOKEN'
+      });
+    }
+
+    const refreshSecret = getJwtRefreshSecret();
+    let decoded;
+    try {
+      decoded = jwt.verify(token, refreshSecret);
+    } catch (err) {
+      clearAuthCookie(res);
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          success: false,
+          error: 'Your session has expired. Please sign in again.',
+          code: 'REFRESH_EXPIRED'
+        });
+      }
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid refresh token. Please sign in again.',
+        code: 'REFRESH_INVALID'
+      });
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({
+        success: false,
+        error: 'User account not found.'
+      });
+    }
+
+    if (user.status === 'suspended') {
+      clearAuthCookie(res);
+      return res.status(403).json({
+        success: false,
+        error: 'This account has been suspended by an administrator.'
+      });
+    }
+
+    // Issue fresh access token (15m) and fresh refresh token (1d)
+    const newAccessToken = generateToken(user._id, user.role);
+    const newRefreshToken = generateRefreshToken(user._id, user.role);
+    setAuthCookie(res, newAccessToken, newRefreshToken);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Session refreshed successfully.',
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+      user: user.toSafeObject()
+    });
+  } catch (error) {
+    return next(error);
+  }
 };
 
 /**
@@ -611,12 +743,14 @@ export const verifyEmailOtp = async (req, res, next) => {
         await existingUser.save();
 
         const token = generateToken(existingUser._id, existingUser.role);
-        setAuthCookie(res, token);
+        const refreshToken = generateRefreshToken(existingUser._id, existingUser.role);
+        setAuthCookie(res, token, refreshToken);
         return res.status(200).json({
           success: true,
           message: 'Email address verified successfully.',
           user: existingUser.toSafeObject(),
-          token
+          token,
+          refreshToken
         });
       }
     }
@@ -690,15 +824,17 @@ export const verifyEmailOtp = async (req, res, next) => {
     // Clean up pending registration
     await PendingRegistration.deleteOne({ _id: pending._id });
 
-    // Issue JWT & set HttpOnly cookie
+    // Issue JWT Access Token & Refresh Token with HttpOnly cookies
     const token = generateToken(newUser._id, newUser.role);
-    setAuthCookie(res, token);
+    const refreshToken = generateRefreshToken(newUser._id, newUser.role);
+    setAuthCookie(res, token, refreshToken);
 
     return res.status(201).json({
       success: true,
       message: 'Email verified successfully and account created.',
       user: newUser.toSafeObject(),
-      token
+      token,
+      refreshToken
     });
   } catch (error) {
     return next(error);
