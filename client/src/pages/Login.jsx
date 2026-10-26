@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AlertCircle, LogIn, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, LogIn, CheckCircle2, Mail } from 'lucide-react';
 import PasswordInput from '../components/common/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -97,7 +97,7 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem', color: 'var(--color-text-title)' }}>Welcome Back</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
-            Sign in to access your ServeEase bookings and service requests
+            Sign in to continue
           </p>
         </div>
 
@@ -202,22 +202,25 @@ export default function Login() {
             <label className="form-label" htmlFor="login-email">
               Email Address <span className="required">*</span>
             </label>
-            <input
-              id="login-email"
-              type="email"
-              className="form-input"
-              placeholder={
-                role === 'admin' 
-                  ? 'e.g. admin@serveease.com' 
-                  : role === 'provider' 
-                    ? 'e.g. provider@example.com' 
-                    : 'e.g. rahul@example.com'
-              }
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+            <div className="input-with-icon">
+              <Mail size={16} className="input-icon" />
+              <input
+                id="login-email"
+                type="email"
+                className="form-input"
+                placeholder={
+                  role === 'admin' 
+                    ? 'e.g. admin@serveease.com' 
+                    : role === 'provider' 
+                      ? 'e.g. provider@example.com' 
+                      : 'e.g. rahul@example.com'
+                }
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
           </div>
 
           <div className="form-group">
@@ -251,10 +254,10 @@ export default function Login() {
               id="remember-me"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              style={{ accentColor: 'var(--primary-600)', width: '1rem', height: '1rem' }}
+              style={{ accentColor: 'var(--primary-600)', width: '1.05rem', height: '1.05rem', cursor: 'pointer' }}
             />
-            <label htmlFor="remember-me" style={{ color: 'var(--color-text-body)', cursor: 'pointer' }}>
-              Remember this device (HttpOnly session)
+            <label htmlFor="remember-me" style={{ color: 'var(--color-text-body)', cursor: 'pointer', userSelect: 'none' }}>
+              Remember this device
             </label>
           </div>
 
@@ -271,13 +274,6 @@ export default function Login() {
             Register here
           </Link>
         </div>
-
-        {/* Admin Bootstrap Note */}
-        {role === 'admin' && (
-          <div style={{ marginTop: '1.25rem', padding: '0.85rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-            🛡️ <strong>Admin Notice:</strong> Admin accounts are created via <code>npm run bootstrap:admin</code> on the backend. Public registration cannot create administrator accounts.
-          </div>
-        )}
       </div>
     </div>
   );
