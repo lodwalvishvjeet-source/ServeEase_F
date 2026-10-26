@@ -95,11 +95,8 @@ export default function Login() {
       <div className="auth-card">
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>
-            Secure Sign In
-          </span>
-          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>Welcome Back</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem', color: 'var(--color-text-title)' }}>Welcome Back</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
             Sign in to access your ServeEase bookings and service requests
           </p>
         </div>
@@ -186,7 +183,7 @@ export default function Login() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              {isGoogleLoading ? 'Connecting with Google...' : `Continue with Google as ${role === 'provider' ? 'Provider' : 'Customer'}`}
+              {isGoogleLoading ? 'Connecting with Google...' : 'Sign in with Google'}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', margin: '1.25rem 0', color: 'var(--color-text-muted)' }}>

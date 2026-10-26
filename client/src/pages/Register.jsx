@@ -211,21 +211,6 @@ export default function Register() {
       <div className="ambient-auth-card">
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            backgroundColor: 'var(--primary-50)',
-            color: 'var(--primary-700)',
-            padding: '0.35rem 0.85rem',
-            borderRadius: '9999px',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            marginBottom: '0.65rem'
-          }}>
-            <Sparkles size={14} style={{ color: 'var(--primary-600)' }} />
-            <span>Join ServeEase</span>
-          </div>
           <h1 style={{ fontSize: '1.85rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--color-text-title)' }}>
             Create Your Account
           </h1>
@@ -326,7 +311,7 @@ export default function Register() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            {isGoogleLoading ? 'Connecting with Google...' : `Sign up with Google as ${role === 'provider' ? 'Provider' : 'Customer'}`}
+            {isGoogleLoading ? 'Connecting with Google...' : 'Sign up with Google'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', margin: '1.25rem 0', color: 'var(--color-text-muted)' }}>
@@ -426,7 +411,7 @@ export default function Register() {
               <label className="form-label" htmlFor="customer-city">
                 Your City <span className="required">*</span>
               </label>
-              <div className="input-with-icon" style={{ marginBottom: '0.5rem' }}>
+              <div className="input-with-icon">
                 <MapPin size={16} className="input-icon" />
                 <select
                   id="customer-city"
@@ -444,21 +429,6 @@ export default function Register() {
                   ))}
                 </select>
               </div>
-
-              {/* Quick Pick City Chips */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Quick Pick:</span>
-                {SUPPORTED_CITIES.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`city-quick-chip ${selectedCity === c.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedCity(c.id)}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 
@@ -471,12 +441,13 @@ export default function Register() {
               padding: '1.25rem',
               marginBottom: '1.25rem'
             }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-600)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary-600)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Briefcase size={16} /> Service Provider Profile
               </h3>
 
-              <div className="grid-2">
-                <div className="form-group">
+              {/* Row 1: Operating City & Localities */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" htmlFor="provider-city">
                     Operating City <span className="required">*</span>
                   </label>
@@ -490,7 +461,7 @@ export default function Register() {
                       disabled={isLoading}
                       required
                     >
-                      <option value="">-- Select Operating City --</option>
+                      <option value="">-- Select City --</option>
                       {SUPPORTED_CITIES.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -498,9 +469,9 @@ export default function Register() {
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" htmlFor="provider-area">
-                    Service Localities / Neighborhoods <span className="required">*</span>
+                    Service Localities <span className="required">*</span>
                   </label>
                   <Autocomplete
                     id="provider-area"
@@ -514,13 +485,17 @@ export default function Register() {
                     allowCustom={true}
                     clearable={true}
                     emptyMessage={activeCityMeta ? `No predefined areas for ${activeCityMeta.name}. You can type any area manually.` : 'Select operating city first.'}
+                    icon={<MapPin size={16} />}
                   />
                 </div>
               </div>
 
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="provider-category">Primary Trade / Category <span className="required">*</span></label>
+              {/* Row 2: Trade & Experience */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="provider-category">
+                    Primary Trade <span className="required">*</span>
+                  </label>
                   <select
                     id="provider-category"
                     className="form-input"
@@ -534,8 +509,10 @@ export default function Register() {
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="provider-experience">Experience (Years) <span className="required">*</span></label>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="provider-experience">
+                    Experience (Years) <span className="required">*</span>
+                  </label>
                   <input
                     id="provider-experience"
                     type="number"
@@ -557,7 +534,7 @@ export default function Register() {
                   id="provider-services"
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Tap repair, pipe installation, water heater fitting, drainage clearing"
+                  placeholder="e.g. Tap repair, pipe installation, water heater fitting"
                   value={servicesOffered}
                   onChange={(e) => setServicesOffered(e.target.value)}
                   disabled={isLoading}
