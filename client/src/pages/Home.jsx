@@ -656,7 +656,7 @@ function CustomerHomeView({ user }) {
               )}
             </div>
             <h1 style={{ fontSize: '1.75rem', color: 'var(--color-text-title)', marginBottom: '0.2rem' }}>
-              Welcome back, {user?.name || 'Customer'} 👋
+              Welcome back, {user?.name || 'Customer'}
             </h1>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
               Find and manage home repair specialists in your service area.

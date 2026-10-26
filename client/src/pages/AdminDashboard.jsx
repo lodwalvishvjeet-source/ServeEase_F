@@ -33,7 +33,13 @@ import {
   Activity,
   Award,
   ArrowUpRight,
-  Layers
+  Layers,
+  Mail,
+  Phone,
+  ExternalLink,
+  FileCheck,
+  History,
+  User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -107,8 +113,47 @@ export default function AdminDashboard() {
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [userCityFilter, setUserCityFilter] = useState('all');
 
-  // User Action Modals
+  // User Action Modals & Comprehensive 360 Profile Inspection
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [profileModalUser, setProfileModalUser] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
+  const [profileModalTab, setProfileModalTab] = useState('overview'); // 'overview' | 'bookings' | 'reviews' | 'documents' | 'audit'
+
+  const handleOpenProfileModal = useCallback(async (targetUser) => {
+    if (!targetUser) return;
+    const targetId = typeof targetUser === 'string' ? targetUser : (targetUser._id || targetUser.id);
+    if (!targetId) return;
+
+    if (typeof targetUser === 'object') {
+      setProfileModalUser(targetUser);
+    } else {
+      setProfileModalUser({ _id: targetId, name: 'Loading user...' });
+    }
+    setProfileLoading(true);
+    setProfileError(null);
+    setProfileModalTab('overview');
+
+    try {
+      const res = await adminApi.getUserById(targetId);
+      if (res?.success && res.user) {
+        setProfileModalUser(res.user);
+      } else {
+        setProfileError(res?.error || 'Failed to retrieve full user profile.');
+      }
+    } catch (err) {
+      console.warn('Error loading full user profile:', err);
+      setProfileError(err.message || 'Network error fetching user profile.');
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
+
+  const handleCloseProfileModal = useCallback(() => {
+    setProfileModalUser(null);
+    setProfileError(null);
+  }, []);
+
   const [actionTargetUser, setActionTargetUser] = useState(null);
   const [actionStatusType, setActionStatusType] = useState('suspended'); // 'active' | 'suspended'
   const [actionReason, setActionReason] = useState('');
@@ -1500,11 +1545,13 @@ export default function AdminDashboard() {
                           <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
                             <button
                               type="button"
-                              onClick={() => setSelectedUserDetail(u)}
+                              onClick={() => handleOpenProfileModal(u)}
                               className="btn btn-outline btn-sm"
-                              title="View full account profile"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              title="View full account profile & history"
                             >
                               <Eye size={13} />
+                              <span>View Profile</span>
                             </button>
 
                             {!isSelf && (
@@ -1751,7 +1798,24 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenProfileModal(p)}
+                        className="btn btn-sm btn-outline"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          borderColor: '#cbd5e1',
+                          color: 'var(--color-text-title)'
+                        }}
+                        title="View complete provider profile, stats & credentials"
+                      >
+                        <Eye size={14} />
+                        <span>View Profile</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => openVerifyModal(p, true)}
@@ -1876,11 +1940,49 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ color: 'var(--color-text-body)' }}>{b.customer?.name || 'Customer'}</span>
+                        <button
+                          type="button"
+                          onClick={() => b.customer?._id && handleOpenProfileModal(b.customer)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            textAlign: 'left',
+                            cursor: b.customer?._id ? 'pointer' : 'default',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          title={b.customer?._id ? "Inspect customer profile" : ""}
+                        >
+                          <span style={{ color: b.customer?._id ? 'var(--primary-700)' : 'var(--color-text-body)', fontWeight: 600 }}>
+                            {b.customer?.name || 'Customer'}
+                          </span>
+                          {b.customer?._id && <Eye size={11} style={{ color: 'var(--primary-600)' }} />}
+                        </button>
                         <div style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>{b.customer?.email}</div>
                       </td>
                       <td>
-                        <span style={{ color: 'var(--color-text-body)' }}>{b.provider?.name || 'Provider'}</span>
+                        <button
+                          type="button"
+                          onClick={() => b.provider?._id && handleOpenProfileModal(b.provider)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            textAlign: 'left',
+                            cursor: b.provider?._id ? 'pointer' : 'default',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          title={b.provider?._id ? "Inspect provider profile" : ""}
+                        >
+                          <span style={{ color: b.provider?._id ? 'var(--primary-700)' : 'var(--color-text-body)', fontWeight: 600 }}>
+                            {b.provider?.name || 'Provider'}
+                          </span>
+                          {b.provider?._id && <Eye size={11} style={{ color: 'var(--primary-600)' }} />}
+                        </button>
                         <div style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>{b.provider?.providerDetails?.title || b.category}</div>
                       </td>
                       <td>
@@ -2211,11 +2313,12 @@ export default function AdminDashboard() {
       )}
 
       {/* ========================================================
-          MODAL: USER DETAILS POPUP
+          MODAL: COMPREHENSIVE 360-DEGREE USER PROFILE INSPECTION
           ======================================================== */}
-      {selectedUserDetail && (
+      {profileModalUser && (
         <div
           className="modal-backdrop"
+          onClick={handleCloseProfileModal}
           style={{
             position: 'fixed',
             top: 0,
@@ -2228,37 +2331,745 @@ export default function AdminDashboard() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem'
+            padding: '1.25rem'
           }}
         >
-          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '2rem', backgroundColor: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--color-text-title)' }}>
-                  User Account Inspection
-                </h3>
-                <span className="badge badge-primary" style={{ marginTop: '0.3rem' }}>
-                  Role: {selectedUserDetail.role}
-                </span>
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '920px',
+              width: '100%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              backgroundColor: 'var(--color-bg-card)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--color-border)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* 1. Header Banner */}
+            <div style={{
+              padding: '1.5rem 1.75rem',
+              borderBottom: '1px solid var(--color-border)',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: profileModalUser.role === 'provider' ? '#dcfce7' : profileModalUser.role === 'admin' ? '#f3e8ff' : '#e0f2fe',
+                  color: profileModalUser.role === 'provider' ? '#15803d' : profileModalUser.role === 'admin' ? '#7e22ce' : '#0369a1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.35rem',
+                  fontWeight: 800,
+                  border: `2px solid ${profileModalUser.role === 'provider' ? '#86efac' : profileModalUser.role === 'admin' ? '#d8b4fe' : '#7dd3fc'}`
+                }}>
+                  {profileModalUser.name ? profileModalUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.35rem', color: 'var(--color-text-title)', fontWeight: 800 }}>
+                      {profileModalUser.name}
+                    </h2>
+                    <span className={`badge ${profileModalUser.role === 'admin' ? 'badge-prototype' : profileModalUser.role === 'provider' ? 'badge-primary' : ''}`} style={{ textTransform: 'capitalize' }}>
+                      {profileModalUser.role} Account
+                    </span>
+                    <span className={`badge ${profileModalUser.status === 'suspended' ? 'badge-cancelled' : 'badge-completed'}`}>
+                      {profileModalUser.status === 'suspended' ? 'Suspended' : 'Active'}
+                    </span>
+                    {profileModalUser.emailVerified ? (
+                      <span style={{ fontSize: '0.74rem', padding: '0.15rem 0.5rem', borderRadius: '999px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                        <CheckCircle2 size={12} /> Email Verified
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.74rem', padding: '0.15rem 0.5rem', borderRadius: '999px', backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                        <AlertCircle size={12} /> Email Pending
+                      </span>
+                    )}
+                    {profileModalUser.role === 'provider' && (
+                      <span style={{
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '999px',
+                        backgroundColor: profileModalUser.providerDetails?.isVerified ? '#dcfce7' : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? '#fee2e2' : '#fef3c7',
+                        color: profileModalUser.providerDetails?.isVerified ? '#166534' : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? '#991b1b' : '#92400e',
+                        border: `1px solid ${profileModalUser.providerDetails?.isVerified ? '#86efac' : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? '#fca5a5' : '#fde68a'}`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {profileModalUser.providerDetails?.isVerified ? <CheckCircle2 size={12} /> : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? <ShieldAlert size={12} /> : <AlertCircle size={12} />}
+                        {profileModalUser.providerDetails?.isVerified ? 'Verified Pro' : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? 'Rejected' : 'Pending Verification'}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    {profileModalUser.email} {profileModalUser.phoneNumber ? `• ${profileModalUser.phoneNumber}` : ''} • Registered {new Date(profileModalUser.createdAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
               </div>
-              <button type="button" onClick={() => setSelectedUserDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8' }}>
-                ✕
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {profileLoading && (
+                  <span style={{ fontSize: '0.78rem', color: 'var(--primary-600)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <RefreshCw size={13} className="animate-spin" /> Fetching live data...
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCloseProfileModal}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.35rem',
+                    borderRadius: '6px',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Close inspection"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Sub-tab Bar */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid var(--color-border)',
+              backgroundColor: '#f8fafc',
+              padding: '0 1.5rem',
+              overflowX: 'auto',
+              gap: '0.5rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => setProfileModalTab('overview')}
+                style={{
+                  padding: '0.75rem 0.9rem',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: profileModalTab === 'overview' ? 700 : 500,
+                  color: profileModalTab === 'overview' ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                  borderBottom: `2px solid ${profileModalTab === 'overview' ? 'var(--primary-600)' : 'transparent'}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <Briefcase size={14} />
+                <span>Profile & Stats</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfileModalTab('bookings')}
+                style={{
+                  padding: '0.75rem 0.9rem',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: profileModalTab === 'bookings' ? 700 : 500,
+                  color: profileModalTab === 'bookings' ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                  borderBottom: `2px solid ${profileModalTab === 'bookings' ? 'var(--primary-600)' : 'transparent'}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <Calendar size={14} />
+                <span>Bookings ({profileModalUser.stats?.bookingCount ?? (profileModalUser.recentBookings?.length || 0)})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfileModalTab('reviews')}
+                style={{
+                  padding: '0.75rem 0.9rem',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: profileModalTab === 'reviews' ? 700 : 500,
+                  color: profileModalTab === 'reviews' ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                  borderBottom: `2px solid ${profileModalTab === 'reviews' ? 'var(--primary-600)' : 'transparent'}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <Star size={14} />
+                <span>Reviews ({profileModalUser.stats?.reviewCount ?? (profileModalUser.recentReviews?.length || 0)})</span>
+              </button>
+
+              {profileModalUser.role === 'provider' && (
+                <button
+                  type="button"
+                  onClick={() => setProfileModalTab('documents')}
+                  style={{
+                    padding: '0.75rem 0.9rem',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: profileModalTab === 'documents' ? 700 : 500,
+                    color: profileModalTab === 'documents' ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                    borderBottom: `2px solid ${profileModalTab === 'documents' ? 'var(--primary-600)' : 'transparent'}`,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}
+                >
+                  <FileText size={14} />
+                  <span>Documents ({profileModalUser.documents?.length || 0})</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setProfileModalTab('audit')}
+                style={{
+                  padding: '0.75rem 0.9rem',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: profileModalTab === 'audit' ? 700 : 500,
+                  color: profileModalTab === 'audit' ? 'var(--primary-600)' : 'var(--color-text-muted)',
+                  borderBottom: `2px solid ${profileModalTab === 'audit' ? 'var(--primary-600)' : 'transparent'}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <History size={14} />
+                <span>Audit Logs ({profileModalUser.auditHistory?.length || 0})</span>
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem' }}>
-              <div><strong>Name:</strong> {selectedUserDetail.name}</div>
-              <div><strong>Email:</strong> {selectedUserDetail.email}</div>
-              <div><strong>Phone:</strong> {selectedUserDetail.phoneNumber || 'Not provided'}</div>
-              <div><strong>City:</strong> {selectedUserDetail.cityName || selectedUserDetail.city || 'Sangli'}</div>
-              <div><strong>Status:</strong> {selectedUserDetail.status}</div>
-              <div><strong>User ID:</strong> <code style={{ fontSize: '0.78rem' }}>{selectedUserDetail._id}</code></div>
-              <div><strong>Registration:</strong> {new Date(selectedUserDetail.createdAt).toLocaleString('en-IN')}</div>
+            {/* 3. Modal Body (Scrollable) */}
+            <div style={{
+              padding: '1.5rem',
+              overflowY: 'auto',
+              maxHeight: 'calc(92vh - 200px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.5rem'
+            }}>
+              {profileError && (
+                <div className="alert-box alert-danger">
+                  <AlertCircle size={15} />
+                  <span>{profileError}</span>
+                </div>
+              )}
+
+              {/* TAB 1: OVERVIEW & PROFILE */}
+              {profileModalTab === 'overview' && (
+                <>
+                  {/* KPI Stat Cards */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: '#f8fafc', border: '1px solid var(--color-border)' }}>
+                      <span style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+                        Total Bookings
+                      </span>
+                      <h4 style={{ margin: '0.35rem 0 0', fontSize: '1.45rem', color: 'var(--color-text-title)', fontWeight: 800 }}>
+                        {profileModalUser.stats?.bookingCount ?? 0}
+                      </h4>
+                    </div>
+
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+                      <span style={{ fontSize: '0.76rem', color: '#047857', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+                        Completed Bookings
+                      </span>
+                      <h4 style={{ margin: '0.35rem 0 0', fontSize: '1.45rem', color: '#065f46', fontWeight: 800 }}>
+                        {profileModalUser.stats?.completedBookings ?? 0}
+                      </h4>
+                    </div>
+
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: '#fff1f2', border: '1px solid #fecdd3' }}>
+                      <span style={{ fontSize: '0.76rem', color: '#be123c', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+                        Cancelled / Dropped
+                      </span>
+                      <h4 style={{ margin: '0.35rem 0 0', fontSize: '1.45rem', color: '#9f1239', fontWeight: 800 }}>
+                        {profileModalUser.stats?.cancelledBookings ?? 0}
+                      </h4>
+                    </div>
+
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                      <span style={{ fontSize: '0.76rem', color: '#1d4ed8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+                        {profileModalUser.role === 'provider' ? 'Total Revenue' : 'Total Spent'}
+                      </span>
+                      <h4 style={{ margin: '0.35rem 0 0', fontSize: '1.45rem', color: '#1e40af', fontWeight: 800, display: 'flex', alignItems: 'center' }}>
+                        ₹{Number(profileModalUser.stats?.totalRevenue || 0).toLocaleString('en-IN')}
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Account Information Card */}
+                  <div style={{
+                    padding: '1.25rem',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-card)'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--color-text-title)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <User size={16} style={{ color: 'var(--primary-600)' }} />
+                      Account Identity & Registration
+                    </h4>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.85rem', fontSize: '0.88rem' }}>
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Full Legal Name</span>
+                        <strong style={{ color: 'var(--color-text-title)' }}>{profileModalUser.name}</strong>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Email Address</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ color: 'var(--color-text-title)' }}>{profileModalUser.email}</span>
+                          {profileModalUser.emailVerified && <CheckCircle2 size={13} style={{ color: '#16a34a' }} />}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Contact Phone</span>
+                        <span style={{ color: 'var(--color-text-title)' }}>{profileModalUser.phoneNumber || 'Not provided'}</span>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Registered Operating City</span>
+                        <span style={{ color: 'var(--color-text-title)' }}>{profileModalUser.cityName || profileModalUser.city || 'Sangli'}</span>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Account Status</span>
+                        <span className={`badge ${profileModalUser.status === 'suspended' ? 'badge-cancelled' : 'badge-completed'}`}>
+                          {profileModalUser.status === 'suspended' ? 'Suspended' : 'Active'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Database Entity ID</span>
+                        <code style={{ fontSize: '0.78rem', backgroundColor: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                          {profileModalUser._id}
+                        </code>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Terms Accepted</span>
+                        <span style={{ color: 'var(--color-text-body)' }}>
+                          {profileModalUser.termsAccepted ? (profileModalUser.termsAcceptedAt ? new Date(profileModalUser.termsAcceptedAt).toLocaleString('en-IN') : 'Yes') : 'No'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Account Created On</span>
+                        <span style={{ color: 'var(--color-text-body)' }}>
+                          {profileModalUser.createdAt ? new Date(profileModalUser.createdAt).toLocaleString('en-IN') : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* If Provider: Professional Details Card */}
+                  {profileModalUser.role === 'provider' && (
+                    <div style={{
+                      padding: '1.25rem',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-bg-card)'
+                    }}>
+                      <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--color-text-title)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Briefcase size={16} style={{ color: 'var(--primary-600)' }} />
+                        Professional Provider Credentials & Trade Details
+                      </h4>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.85rem', fontSize: '0.88rem' }}>
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Primary Trade / Category</span>
+                          <strong style={{ color: 'var(--primary-700)' }}>
+                            {profileModalUser.providerDetails?.category || profileModalUser.providerDetails?.title || 'General Services'}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Years of Experience</span>
+                          <span style={{ color: 'var(--color-text-title)', fontWeight: 600 }}>
+                            {profileModalUser.providerDetails?.experienceYears || 0} Years
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Service Area / Neighborhoods</span>
+                          <span style={{ color: 'var(--color-text-title)' }}>
+                            {profileModalUser.providerDetails?.serviceArea || 'City-wide coverage'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Pricing Structure</span>
+                          <span style={{ color: 'var(--color-text-title)', fontWeight: 600 }}>
+                            Starting at ₹{profileModalUser.providerDetails?.startingPrice || 0} • ₹{profileModalUser.providerDetails?.hourlyRate || 0}/hr
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Working Availability Status</span>
+                          <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '999px',
+                            backgroundColor: profileModalUser.providerDetails?.isAvailable !== false ? '#ecfdf5' : '#f1f5f9',
+                            color: profileModalUser.providerDetails?.isAvailable !== false ? '#047857' : '#64748b',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <span style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: profileModalUser.providerDetails?.isAvailable !== false ? '#10b981' : '#94a3b8'
+                            }} />
+                            {profileModalUser.providerDetails?.isAvailable !== false ? 'Taking Jobs (Online)' : 'Unavailable (Offline)'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Expected Response Time</span>
+                          <span style={{ color: 'var(--color-text-title)' }}>
+                            {profileModalUser.providerDetails?.responseTime || 'Within 1 hour'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Customer Rating</span>
+                          <span style={{ color: '#d97706', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Star size={13} fill="#d97706" />
+                            {profileModalUser.providerDetails?.rating ? `${profileModalUser.providerDetails.rating} / 5` : 'No rating yet'}
+                            <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>
+                              ({profileModalUser.providerDetails?.reviewCount || 0} reviews)
+                            </span>
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem' }}>Verification State</span>
+                          <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: profileModalUser.providerDetails?.isVerified ? '#166534' : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? '#991b1b' : '#92400e'
+                          }}>
+                            {profileModalUser.providerDetails?.isVerified ? 'Approved & Badge Active' : profileModalUser.providerDetails?.verificationStatus === 'rejected' ? 'Application Rejected' : 'Under Review'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bio */}
+                      <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem', marginBottom: '0.25rem' }}>Professional Bio</span>
+                        <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--color-text-body)', lineHeight: 1.5 }}>
+                          {profileModalUser.providerDetails?.bio || 'No professional bio provided yet.'}
+                        </p>
+                      </div>
+
+                      {/* Services Offered Chips */}
+                      {Array.isArray(profileModalUser.providerDetails?.servicesOffered) && profileModalUser.providerDetails.servicesOffered.length > 0 && (
+                        <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                          <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.78rem', marginBottom: '0.4rem' }}>Services Offered</span>
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            {profileModalUser.providerDetails.servicesOffered.map((svc, sIdx) => (
+                              <span key={sIdx} style={{ fontSize: '0.78rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '0.2rem 0.55rem', borderRadius: '6px', fontWeight: 600 }}>
+                                {svc}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Verification Audit Details if recorded */}
+                      {(profileModalUser.providerDetails?.verifiedAt || profileModalUser.providerDetails?.verificationNotes || profileModalUser.providerDetails?.rejectionReason) && (
+                        <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-text-title)', display: 'block', marginBottom: '0.25rem' }}>
+                            Administrative Verification Record:
+                          </span>
+                          {profileModalUser.providerDetails.verifiedAt && (
+                            <div>Verified Date: {new Date(profileModalUser.providerDetails.verifiedAt).toLocaleString('en-IN')}</div>
+                          )}
+                          {profileModalUser.providerDetails.verificationNotes && (
+                            <div>Notes: {profileModalUser.providerDetails.verificationNotes}</div>
+                          )}
+                          {profileModalUser.providerDetails.rejectionReason && (
+                            <div style={{ color: '#dc2626' }}>Rejection Reason: {profileModalUser.providerDetails.rejectionReason}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* TAB 2: BOOKINGS LEDGER */}
+              {profileModalTab === 'bookings' && (
+                <div>
+                  <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--color-text-title)', fontWeight: 700 }}>
+                    Recent Service Appointments ({profileModalUser.recentBookings?.length || 0})
+                  </h4>
+
+                  {!profileModalUser.recentBookings || profileModalUser.recentBookings.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--color-text-muted)' }}>
+                      <Calendar size={32} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+                      <p style={{ margin: 0 }}>No bookings recorded for this user.</p>
+                    </div>
+                  ) : (
+                    <div className="table-responsive-container">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Service & Category</th>
+                            <th>{profileModalUser.role === 'customer' ? 'Service Provider' : 'Customer'}</th>
+                            <th>Schedule Date</th>
+                            <th>City / Address</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {profileModalUser.recentBookings.map((bk) => {
+                            const counterparty = profileModalUser.role === 'customer' ? bk.provider : bk.customer;
+                            return (
+                              <tr key={bk._id}>
+                                <td>
+                                  <strong style={{ color: 'var(--color-text-title)', display: 'block' }}>{bk.serviceTitle || bk.category}</strong>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{bk.category}</span>
+                                </td>
+                                <td>
+                                  <span style={{ color: 'var(--color-text-body)', fontWeight: 600 }}>{counterparty?.name || 'User'}</span>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{counterparty?.email}</div>
+                                </td>
+                                <td style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                                  {bk.scheduledDate ? new Date(bk.scheduledDate).toLocaleDateString('en-IN') : '—'} {bk.scheduledTime ? `at ${bk.scheduledTime}` : ''}
+                                </td>
+                                <td style={{ fontSize: '0.82rem' }}>
+                                  <div>{bk.city || '—'}</div>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{bk.address || '—'}</span>
+                                </td>
+                                <td style={{ fontWeight: 700, color: 'var(--color-text-title)' }}>
+                                  ₹{bk.price || bk.totalAmount || 0}
+                                </td>
+                                <td>
+                                  <span className={`badge ${
+                                    bk.status === 'completed' ? 'badge-completed' :
+                                    bk.status === 'accepted' ? 'badge-accepted' :
+                                    bk.status === 'pending' ? 'badge-pending' : 'badge-cancelled'
+                                  }`} style={{ textTransform: 'capitalize' }}>
+                                    {bk.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: REVIEWS & FEEDBACK */}
+              {profileModalTab === 'reviews' && (
+                <div>
+                  <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--color-text-title)', fontWeight: 700 }}>
+                    Reviews & Feedback Ledger ({profileModalUser.recentReviews?.length || 0})
+                  </h4>
+
+                  {!profileModalUser.recentReviews || profileModalUser.recentReviews.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--color-text-muted)' }}>
+                      <Star size={32} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+                      <p style={{ margin: 0 }}>No reviews recorded for this user yet.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {profileModalUser.recentReviews.map((rev) => {
+                        const otherParty = profileModalUser.role === 'customer' ? rev.provider : rev.customer;
+                        return (
+                          <div key={rev._id} style={{ padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: '#f8fafc' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} size={14} fill={i < rev.rating ? '#f59e0b' : 'none'} color={i < rev.rating ? '#f59e0b' : '#cbd5e1'} />
+                                ))}
+                                <span style={{ fontWeight: 700, fontSize: '0.85rem', marginLeft: '0.25rem' }}>{rev.rating}/5</span>
+                              </div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                                {new Date(rev.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+
+                            <p style={{ margin: '0.25rem 0', fontSize: '0.86rem', color: 'var(--color-text-body)' }}>
+                              "{rev.comment}"
+                            </p>
+
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.4rem' }}>
+                              {profileModalUser.role === 'customer' ? 'Reviewed Provider' : 'Reviewed by'}: <strong>{otherParty?.name || 'User'}</strong>
+                              {rev.booking?.serviceTitle ? ` • Service: ${rev.booking.serviceTitle}` : ''}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 4: VERIFICATION DOCUMENTS (PROVIDER ONLY) */}
+              {profileModalTab === 'documents' && profileModalUser.role === 'provider' && (
+                <div>
+                  <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--color-text-title)', fontWeight: 700 }}>
+                    Uploaded Verification Documents ({profileModalUser.documents?.length || 0})
+                  </h4>
+
+                  {!profileModalUser.documents || profileModalUser.documents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--color-text-muted)' }}>
+                      <FileText size={32} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+                      <p style={{ margin: 0 }}>No verification documents uploaded by this provider.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {profileModalUser.documents.map((doc) => {
+                        const typeNames = {
+                          id_proof: 'Government ID Proof',
+                          trade_license: 'Trade License / Business Registration',
+                          address_proof: 'Address Proof',
+                          certification: 'Skill Certification',
+                          other: 'Other Credential'
+                        };
+                        return (
+                          <div key={doc._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <strong style={{ color: 'var(--color-text-title)', fontSize: '0.9rem' }}>
+                                  {typeNames[doc.documentType] || doc.documentType}
+                                </strong>
+                                <span className={`badge ${doc.status === 'approved' ? 'badge-completed' : doc.status === 'rejected' ? 'badge-cancelled' : 'badge-pending'}`}>
+                                  {doc.status}
+                                </span>
+                              </div>
+                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', display: 'block', marginTop: '0.2rem' }}>
+                                {doc.originalFilename} • {formatFileSize(doc.fileSize)} • Uploaded {new Date(doc.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleViewAdminDocument(doc._id)}
+                              className="btn btn-outline btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' }}
+                            >
+                              <ExternalLink size={13} />
+                              <span>Inspect Document</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 5: AUDIT LOGS */}
+              {profileModalTab === 'audit' && (
+                <div>
+                  <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--color-text-title)', fontWeight: 700 }}>
+                    Administrative Audit Events ({profileModalUser.auditHistory?.length || 0})
+                  </h4>
+
+                  {!profileModalUser.auditHistory || profileModalUser.auditHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--color-text-muted)' }}>
+                      <History size={32} style={{ color: '#cbd5e1', margin: '0 auto 0.5rem' }} />
+                      <p style={{ margin: 0 }}>No administrative actions recorded for this account.</p>
+                    </div>
+                  ) : (
+                    <div className="table-responsive-container">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Timestamp</th>
+                            <th>Action Type</th>
+                            <th>Reason / Notes</th>
+                            <th>Admin Actor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {profileModalUser.auditHistory.map((item) => (
+                            <tr key={item._id}>
+                              <td style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                                {new Date(item.createdAt).toLocaleString('en-IN')}
+                              </td>
+                              <td>
+                                <code style={{ backgroundColor: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
+                                  {item.action}
+                                </code>
+                              </td>
+                              <td style={{ fontSize: '0.85rem' }}>
+                                {item.reason || item.notes || '—'}
+                              </td>
+                              <td style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                                {item.adminName || item.adminEmail || item.adminId || 'System'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-              <Button variant="outline" onClick={() => setSelectedUserDetail(null)}>
-                Close
+            {/* 4. Footer */}
+            <div style={{
+              padding: '1rem 1.75rem',
+              borderTop: '1px solid var(--color-border)',
+              backgroundColor: '#f8fafc',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>
+                <ShieldCheck size={16} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
+                <span>
+                  <strong>Read-Only Inspection:</strong> You are viewing the complete account profile. In the next step, we will configure which fields can be edited by administrators.
+                </span>
+              </div>
+              <Button variant="outline" onClick={handleCloseProfileModal}>
+                Close Profile
               </Button>
             </div>
           </div>

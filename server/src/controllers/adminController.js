@@ -10,7 +10,7 @@ import { recalculateProviderRating } from './reviewController.js';
 import { getCityDisplayName, normalizeCity } from '../config/cities.js';
 
 // Safe customer / provider projection for admin views
-const USER_SAFE_FIELDS = 'name email role city phoneNumber status verificationStatus providerDetails createdAt updatedAt';
+const USER_SAFE_FIELDS = 'name email role city phoneNumber status verificationStatus emailVerified emailVerifiedAt termsAccepted termsAcceptedAt providerDetails createdAt updatedAt';
 
 /**
  * Helper to compute platform analytics and distributions directly from MongoDB
@@ -473,7 +473,8 @@ export const getUsers = async (req, res, next) => {
 
 /**
  * GET /api/admin/users/:id
- * Retrieve detailed user profile along with operational audit history
+ * Retrieve comprehensive 360-degree user profile (customer or provider),
+ * including credentials, verification documents, recent bookings, reviews, and audit history.
  */
 export const getUserById = async (req, res, next) => {
   try {
@@ -490,17 +491,95 @@ export const getUserById = async (req, res, next) => {
     // Retrieve contextual operational counts
     let bookingCount = 0;
     let reviewCount = 0;
+    let completedBookings = 0;
+    let cancelledBookings = 0;
+    let totalRevenue = 0;
 
-    if (user.role === 'customer') {
-      [bookingCount, reviewCount] = await Promise.all([
-        Booking.countDocuments({ customer: user._id }),
-        Review.countDocuments({ customer: user._id })
+    const userRole = user.role;
+    const filterKey = userRole === 'customer' ? 'customer' : 'provider';
+
+    if (userRole === 'customer' || userRole === 'provider') {
+      const [
+        totalB,
+        totalR,
+        compB,
+        cancB,
+        revAgg
+      ] = await Promise.all([
+        Booking.countDocuments({ [filterKey]: user._id }),
+        Review.countDocuments({ [filterKey]: user._id }),
+        Booking.countDocuments({ [filterKey]: user._id, status: 'completed' }),
+        Booking.countDocuments({ [filterKey]: user._id, status: 'cancelled' }),
+        Booking.aggregate([
+          { $match: { [filterKey]: user._id, status: { $in: ['completed', 'accepted'] } } },
+          {
+            $group: {
+              _id: null,
+              total: {
+                $sum: {
+                  $cond: [
+                    { $gt: ['$price', 0] },
+                    '$price',
+                    {
+                      $cond: [
+                        { $gt: ['$totalAmount', 0] },
+                        '$totalAmount',
+                        0
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ])
       ]);
-    } else if (user.role === 'provider') {
-      [bookingCount, reviewCount] = await Promise.all([
-        Booking.countDocuments({ provider: user._id }),
-        Review.countDocuments({ provider: user._id })
-      ]);
+
+      bookingCount = totalB;
+      reviewCount = totalR;
+      completedBookings = compB;
+      cancelledBookings = cancB;
+      totalRevenue = (revAgg && revAgg[0] && revAgg[0].total) ? revAgg[0].total : 0;
+    }
+
+    // Recent Bookings (up to 8)
+    let recentBookings = [];
+    if (userRole === 'customer' || userRole === 'provider') {
+      recentBookings = await Booking.find({ [filterKey]: user._id })
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .select('serviceTitle category status scheduledDate scheduledTime price totalAmount city address notes createdAt')
+        .populate(userRole === 'customer' ? 'provider' : 'customer', 'name email phoneNumber')
+        .lean();
+    }
+
+    // Recent Reviews (up to 6)
+    let recentReviews = [];
+    if (userRole === 'customer' || userRole === 'provider') {
+      recentReviews = await Review.find({ [filterKey]: user._id })
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select('rating comment tags status createdAt booking')
+        .populate(userRole === 'customer' ? 'provider' : 'customer', 'name')
+        .populate('booking', 'serviceTitle')
+        .lean();
+    }
+
+    // Provider Documents if role is provider
+    let documents = [];
+    if (userRole === 'provider') {
+      const docRecords = await VerificationDocument.find({ provider: user._id })
+        .sort({ createdAt: -1 });
+      documents = docRecords.map((d) => (typeof d.toSafeObject === 'function' ? d.toSafeObject() : {
+        _id: d._id,
+        documentType: d.documentType,
+        originalFilename: d.originalFilename,
+        mimeType: d.mimeType,
+        fileSize: d.fileSize,
+        status: d.status,
+        rejectionReason: d.rejectionReason,
+        createdAt: d.createdAt
+      }));
     }
 
     const auditHistory = await AuditLog.find({ targetId: user._id })
@@ -515,8 +594,14 @@ export const getUserById = async (req, res, next) => {
         cityName: getCityDisplayName(user.city),
         stats: {
           bookingCount,
-          reviewCount
+          reviewCount,
+          completedBookings,
+          cancelledBookings,
+          totalRevenue
         },
+        documents,
+        recentBookings,
+        recentReviews,
         auditHistory
       }
     });
