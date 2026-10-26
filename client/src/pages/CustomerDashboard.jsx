@@ -158,15 +158,14 @@ export default function CustomerDashboard() {
 
   return (
     <DashboardLayout
-      title={`Customer Workspace`}
-      subtitle={`Welcome back, ${user?.name || 'Customer'}`}
+      title="Dashboard"
+      subtitle="Find services and manage appointments"
     >
       {/* 1. Welcome & City Bar */}
       <div className="card" style={{
-        padding: '1.75rem',
-        marginBottom: '2rem',
+        padding: '1.5rem 1.75rem',
+        marginBottom: '1.5rem',
         backgroundColor: 'var(--color-bg-card)',
-        borderLeft: '4px solid var(--primary-600)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -174,88 +173,79 @@ export default function CustomerDashboard() {
         gap: '1.25rem'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span className="badge badge-primary">Customer Account</span>
-            {cityFeedback && (
+          {cityFeedback && (
+            <div style={{ marginBottom: '0.25rem' }}>
               <span style={{ fontSize: 'var(--font-size-xs, 0.78rem)', color: 'var(--primary-700)', fontWeight: 600 }}>
                 ✓ {cityFeedback}
               </span>
-            )}
-          </div>
+            </div>
+          )}
           <h1 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 1.85rem)', color: 'var(--color-text-title)', marginBottom: '0.25rem', fontWeight: 800 }}>
-            Welcome back, {user?.name || 'Customer'} 👋
+            Welcome back, {user?.name || 'Customer'}
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-base, 0.9375rem)' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-base, 0.9375rem)', margin: 0 }}>
             Book trusted local technicians and manage home repairs in <strong>{activeCityName}</strong>.
           </p>
         </div>
 
-        {/* City Switcher */}
+        {/* City Switcher Pill */}
         <div style={{
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.65rem',
+          gap: '0.5rem',
           backgroundColor: 'var(--color-bg-subtle)',
-          padding: '0.55rem 0.9rem',
-          borderRadius: 'var(--radius-md)',
+          padding: '0.45rem 0.85rem',
+          borderRadius: '9999px',
           border: '1px solid var(--color-border)'
         }}>
-          <MapPin size={18} style={{ color: 'var(--primary-600)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor="customer-city-select" style={{ fontSize: 'var(--font-size-2xs, 0.72rem)', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Service Hub
-            </label>
-            <select
-              id="customer-city-select"
-              value={activeCity}
-              onChange={(e) => handleCityChange(e.target.value)}
-              disabled={isUpdatingCity}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                fontWeight: 700,
-                fontSize: 'var(--font-size-base, 0.95rem)',
-                color: 'var(--color-text-title)',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              {SUPPORTED_CITIES.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
+          <MapPin size={16} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>City:</span>
+          <select
+            id="customer-city-select"
+            value={activeCity}
+            onChange={(e) => handleCityChange(e.target.value)}
+            disabled={isUpdatingCity}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              color: 'var(--color-text-title)',
+              cursor: 'pointer',
+              outline: 'none',
+              paddingRight: '0.25rem'
+            }}
+          >
+            {SUPPORTED_CITIES.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Pending Email Verification Banner */}
+      {/* Pending Email Verification Slim Banner */}
       {!user?.emailVerified && (
         <div style={{
-          backgroundColor: 'var(--color-accent-gold-bg)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.25rem',
-          marginBottom: '2rem',
+          backgroundColor: 'var(--color-accent-gold-bg, #fffbeb)',
+          border: '1px solid var(--color-accent-gold, #fef08a)',
+          borderRadius: 'var(--radius-md, 8px)',
+          padding: '0.75rem 1.25rem',
+          marginBottom: '1.5rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '1rem'
+          gap: '0.75rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <AlertCircle size={22} style={{ color: 'var(--color-accent-gold)', flexShrink: 0 }} />
-            <div>
-              <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-title)', fontSize: '0.98rem' }}>
-                Email Verification Required for Bookings
-              </p>
-              <p style={{ margin: 0, color: 'var(--color-text-body)', fontSize: '0.88rem' }}>
-                You can browse local services and technicians, but your email address must be verified before requesting appointments.
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <AlertCircle size={18} style={{ color: 'var(--color-accent-gold, #d97706)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-body)' }}>
+              <strong>Email verification required:</strong> Please verify your email to unlock all booking features.
+            </span>
           </div>
           <Link to="/verify-email" state={{ email: user?.email }}>
-            <Button variant="primary" size="sm" style={{ backgroundColor: 'var(--color-accent-gold)', borderColor: 'var(--color-accent-gold)' }}>
-              Verify Email Now
+            <Button variant="primary" size="sm" style={{ padding: '0.35rem 0.85rem', fontSize: '0.82rem', backgroundColor: 'var(--color-accent-gold)', borderColor: 'var(--color-accent-gold)' }}>
+              Verify Now &rarr;
             </Button>
           </Link>
         </div>

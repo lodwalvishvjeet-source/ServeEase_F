@@ -10,6 +10,8 @@
  * Credentials (HttpOnly cookies) are consistently sent with credentials: 'include'.
  */
 
+import { getFirebaseIdToken } from './firebaseAuth';
+
 // Strip trailing slashes if configured
 const rawBase = import.meta.env.VITE_API_URL || '';
 const resolveApiBaseUrl = () => {
@@ -67,6 +69,17 @@ async function request(endpoint, options = {}) {
     'Content-Type': 'application/json',
     ...(options.headers || {})
   };
+
+  if (!headers['Authorization']) {
+    try {
+      const fbToken = await getFirebaseIdToken();
+      if (fbToken) {
+        headers['Authorization'] = `Bearer ${fbToken}`;
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const config = {
     credentials: 'include',
@@ -220,6 +233,13 @@ export const authApi = {
     return request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(payload)
+    });
+  },
+
+  firebaseLogin: async (idToken, profileData = {}) => {
+    return request('/api/auth/firebase-login', {
+      method: 'POST',
+      body: JSON.stringify({ idToken, ...profileData })
     });
   },
 

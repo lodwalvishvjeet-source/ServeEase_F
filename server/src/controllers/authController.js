@@ -6,6 +6,7 @@ import { normalizeCity, SUPPORTED_CITIES } from '../config/cities.js';
 import { validateEmail, validateIndianMobile } from '../utils/validation.js';
 import { getJwtSecret, getJwtRefreshSecret } from '../config/env.js';
 import { sendEmail, isEmailConfigured } from '../utils/email.js';
+import { verifyFirebaseIdToken, isFirebaseConfigured } from '../config/firebase.js';
 
 /**
  * Helper to parse JWT expiration string into milliseconds for Cookie maxAge
@@ -936,6 +937,239 @@ export const resendEmailVerificationOtp = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: 'A new verification code has been sent to your email.'
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * POST /api/auth/firebase-login
+ * Authenticate or register a user using a verified Firebase ID token.
+ * 
+ * Secure Account Linking Rules:
+ * 1. User lookup by `firebaseUid` primary.
+ * 2. User lookup by `email` fallback: requires `email_verified: true` to prevent account takeover.
+ * 3. Enforces that existing roles in MongoDB can never be overridden by client requests.
+ * 4. Strict privilege escalation guard: public registration cannot create admin accounts.
+ * 5. Issues ServeEase session cookies (token & refreshToken) for seamless compatibility.
+ */
+export const firebaseLogin = async (req, res, next) => {
+  try {
+    const { idToken, role, name, phoneNumber, city, providerDetails } = req.body;
+
+    if (!idToken || typeof idToken !== 'string' || !idToken.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Firebase ID token is required for authentication.'
+      });
+    }
+
+    if (!isFirebaseConfigured) {
+      return res.status(503).json({
+        success: false,
+        error: 'Firebase Admin authentication is not configured on this server. Please configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in server/.env.'
+      });
+    }
+
+    const verification = await verifyFirebaseIdToken(idToken.trim());
+    if (!verification.isValid || !verification.decodedToken) {
+      return res.status(401).json({
+        success: false,
+        error: verification.error || 'Invalid or expired Firebase ID token.',
+        code: verification.code || 'INVALID_FIREBASE_TOKEN'
+      });
+    }
+
+    const decoded = verification.decodedToken;
+    const uid = decoded.uid;
+    const email = decoded.email ? decoded.email.toLowerCase().trim() : null;
+    const isEmailVerified = Boolean(decoded.email_verified);
+    const picture = decoded.picture || '';
+
+    let user = null;
+
+    // 1. Primary lookup by firebaseUid
+    user = await User.findOne({ firebaseUid: uid });
+
+    // 2. Secondary lookup by email for secure account linking
+    if (!user && email) {
+      user = await User.findOne({ email });
+
+      if (user) {
+        // Enforce account linking security: require verified email to prevent unauthorized binding
+        if (!isEmailVerified) {
+          return res.status(403).json({
+            success: false,
+            error: 'An account with this email already exists on ServeEase. To link your account, please verify your email address in Firebase first.',
+            code: 'EMAIL_VERIFICATION_REQUIRED'
+          });
+        }
+
+        // Securely link existing account to Firebase UID
+        user.firebaseUid = uid;
+        if (!user.emailVerified) {
+          user.emailVerified = true;
+          user.emailVerifiedAt = new Date();
+        }
+        if (picture && user.role === 'provider' && !user.providerDetails?.avatar) {
+          if (!user.providerDetails) user.providerDetails = {};
+          user.providerDetails.avatar = picture;
+        }
+        await user.save();
+      }
+    }
+
+    // 3. If user exists in MongoDB, enforce status and role rules
+    if (user) {
+      if (user.status === 'suspended') {
+        return res.status(403).json({
+          success: false,
+          error: 'This account has been suspended by an administrator. Please contact support.'
+        });
+      }
+
+      // Check role mismatch if login was triggered through a specific role tab
+      if (role && typeof role === 'string' && role.trim()) {
+        const requestedRole = role.trim().toLowerCase();
+        if (requestedRole !== user.role) {
+          return res.status(403).json({
+            success: false,
+            error: `This account is registered as a ${user.role}. Please sign in via the ${user.role} portal.`,
+            actualRole: user.role
+          });
+        }
+      }
+
+      // If token now indicates email is verified but user was previously unverified
+      if (isEmailVerified && !user.emailVerified) {
+        user.emailVerified = true;
+        user.emailVerifiedAt = new Date();
+        await user.save();
+      }
+
+      // Issue standard ServeEase JWT cookies & tokens for backward compatibility
+      const token = generateToken(user._id, user.role);
+      const refreshToken = generateRefreshToken(user._id, user.role);
+      setAuthCookie(res, token, refreshToken);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Signed in successfully with Firebase.',
+        user: user.toSafeObject(),
+        token,
+        refreshToken
+      });
+    }
+
+    // 4. User does not exist in MongoDB -> New User Onboarding / Registration
+    const requestedRole = (role || 'customer').toLowerCase().trim();
+
+    // Strict admin privilege escalation prevention
+    if (
+      requestedRole === 'admin' ||
+      req.body.isAdmin === true ||
+      req.body.isAdmin === 'true' ||
+      req.body.isAdministrator === true
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Administrator accounts cannot be created via public Firebase sign-in. Use the secure bootstrap script.'
+      });
+    }
+
+    if (!['customer', 'provider'].includes(requestedRole)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid account role. Public registration only supports 'customer' or 'provider'."
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'A valid email address is required from your authentication provider.'
+      });
+    }
+
+    // Validate phone number if provided
+    let normalizedPhone = '';
+    if (phoneNumber && String(phoneNumber).trim()) {
+      const phoneCheck = validateIndianMobile(String(phoneNumber));
+      if (!phoneCheck.isValid) {
+        return res.status(400).json({ success: false, error: phoneCheck.error });
+      }
+      normalizedPhone = phoneCheck.normalized;
+    }
+
+    // Validate city if provided (or default to 'sangli' if onboarding with Google)
+    let canonicalCity = '';
+    const rawCity = city || (requestedRole === 'provider' ? providerDetails?.city : '');
+    if (rawCity && String(rawCity).trim()) {
+      const normalized = normalizeCity(rawCity);
+      if (normalized) {
+        canonicalCity = normalized;
+      }
+    }
+
+    // Format providerDetails if role is provider
+    let formattedProviderDetails = undefined;
+    if (requestedRole === 'provider') {
+      const category = providerDetails?.category?.trim() || 'General Services';
+      const serviceArea = providerDetails?.serviceArea?.trim() || 'Central City';
+
+      let servicesOffered = [];
+      if (Array.isArray(providerDetails?.servicesOffered)) {
+        servicesOffered = providerDetails.servicesOffered.map(s => String(s).trim()).filter(Boolean);
+      } else if (typeof providerDetails?.servicesOffered === 'string') {
+        servicesOffered = providerDetails.servicesOffered.split(',').map(s => s.trim()).filter(Boolean);
+      }
+
+      formattedProviderDetails = {
+        category,
+        categorySlug: category.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        title: providerDetails?.title?.trim() || `${category} Specialist`,
+        servicesOffered,
+        experienceYears: Math.max(0, Number(providerDetails?.experienceYears) || 0),
+        city: canonicalCity || 'sangli',
+        serviceArea,
+        startingPrice: Math.max(0, Number(providerDetails?.startingPrice) || 0),
+        hourlyRate: Math.max(0, Number(providerDetails?.hourlyRate) || 0),
+        isAvailable: providerDetails?.isAvailable !== false,
+        isVerified: false,
+        isDemo: false,
+        bio: providerDetails?.bio?.trim() || '',
+        avatar: picture || providerDetails?.avatar?.trim() || '',
+        responseTime: providerDetails?.responseTime?.trim() || 'Within 1 hour'
+      };
+    }
+
+    const displayName = (name && name.trim()) || decoded.name || email.split('@')[0];
+
+    const newUser = await User.create({
+      name: displayName.trim(),
+      email,
+      firebaseUid: uid,
+      role: requestedRole,
+      phoneNumber: normalizedPhone,
+      city: canonicalCity || (requestedRole === 'provider' ? 'sangli' : ''),
+      providerDetails: requestedRole === 'provider' ? formattedProviderDetails : undefined,
+      emailVerified: isEmailVerified,
+      emailVerifiedAt: isEmailVerified ? new Date() : null,
+      status: 'active'
+    });
+
+    const token = generateToken(newUser._id, newUser.role);
+    const refreshToken = generateRefreshToken(newUser._id, newUser.role);
+    setAuthCookie(res, token, refreshToken);
+
+    return res.status(201).json({
+      success: true,
+      isNewUser: true,
+      message: 'Account created and signed in successfully.',
+      user: newUser.toSafeObject(),
+      token,
+      refreshToken
     });
   } catch (error) {
     return next(error);

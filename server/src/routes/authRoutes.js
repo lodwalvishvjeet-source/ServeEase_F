@@ -9,7 +9,8 @@ import {
   verifyOtp,
   resetPassword,
   verifyEmailOtp,
-  resendEmailVerificationOtp
+  resendEmailVerificationOtp,
+  firebaseLogin
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authLimiter, otpLimiter } from '../middleware/rateLimiter.js';
@@ -21,6 +22,7 @@ const router = express.Router();
  */
 router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
+router.post('/firebase-login', authLimiter, firebaseLogin);
 router.post('/forgot-password', otpLimiter, forgotPassword);
 router.post('/verify-otp', authLimiter, verifyOtp);
 router.post('/reset-password', authLimiter, resetPassword);

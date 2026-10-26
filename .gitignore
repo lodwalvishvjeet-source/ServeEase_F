@@ -14,6 +14,12 @@ build/
 .env.test.local
 .env.production.local
 
+# Firebase Service Account Credentials (NEVER commit credentials)
+*serviceAccount*.json
+*firebase-adminsdk*.json
+serviceAccountKey.json
+service-account*.json
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

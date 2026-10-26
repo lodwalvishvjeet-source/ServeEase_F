@@ -5,6 +5,7 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import { getJwtSecret } from '../config/env.js';
+import { verifyFirebaseIdToken, isFirebaseConfigured } from '../config/firebase.js';
 
 let ioInstance = null;
 
@@ -41,16 +42,32 @@ export const initSocket = (httpServer, allowedOrigins = []) => {
         return next(new Error('Authentication required: No token provided'));
       }
 
-      const secret = getJwtSecret();
+      let user = null;
 
-      const decoded = jwt.verify(token, secret);
-      const userId = decoded.userId || decoded.id;
-
-      if (!userId) {
-        return next(new Error('Authentication failed: Malformed token payload'));
+      // Path A: Check if Firebase token
+      if (isFirebaseConfigured) {
+        const fbResult = await verifyFirebaseIdToken(token);
+        if (fbResult.isValid && fbResult.decodedToken) {
+          user = await User.findOne({ firebaseUid: fbResult.decodedToken.uid }).select('-passwordHash -__v');
+          if (!user && fbResult.decodedToken.email && fbResult.decodedToken.email_verified) {
+            user = await User.findOne({ email: fbResult.decodedToken.email.toLowerCase().trim() }).select('-passwordHash -__v');
+          }
+        }
       }
 
-      const user = await User.findById(userId).select('-passwordHash -__v');
+      // Path B: Fallback to ServeEase JWT
+      if (!user) {
+        const secret = getJwtSecret();
+        const decoded = jwt.verify(token, secret);
+        const userId = decoded.userId || decoded.id;
+
+        if (!userId) {
+          return next(new Error('Authentication failed: Malformed token payload'));
+        }
+
+        user = await User.findById(userId).select('-passwordHash -__v');
+      }
+
       if (!user || user.status !== 'active') {
         return next(new Error('Authentication failed: User account not found or suspended'));
       }

@@ -4,7 +4,6 @@ import {
   User, 
   Phone, 
   MapPin, 
-  Shield, 
   CheckCircle2, 
   AlertCircle, 
   ArrowLeft, 
@@ -235,15 +234,11 @@ export default function CustomerProfile() {
                   <strong>{user?.city ? getCityDisplayName(user.city) : 'Not specified'}</strong>
                 </span>
               </div>
-              <div style={{ marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Phone size={15} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
                 <span>
                   Phone: <strong>{user?.phoneNumber || 'Not provided'}</strong>
                 </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Shield size={15} style={{ color: 'var(--primary-600)', flexShrink: 0 }} />
-                <span>Security: <strong>JWT & Cookie Session</strong></span>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { Mail, AlertCircle, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-reac
 import Button from '../components/common/Button';
 import { validateEmail } from '../utils/validation';
 import { authApi } from '../services/api';
+import { firebaseSendPasswordReset, isFirebaseReady } from '../services/firebaseAuth';
 
 /**
  * ForgotPassword Page Component
@@ -29,6 +30,26 @@ export default function ForgotPassword() {
 
     try {
       setIsLoading(true);
+
+      // Path A: Firebase Native Password Reset Email
+      if (isFirebaseReady()) {
+        try {
+          await firebaseSendPasswordReset(emailCheck.normalized);
+          setSuccessMsg('A password reset link has been dispatched to your email address. Please check your inbox and follow the instructions.');
+          return;
+        } catch (fbErr) {
+          // If account is not in Firebase (legacy account), fall through to backend OTP recovery
+          const isLegacyFallback =
+            fbErr.code === 'auth/user-not-found' ||
+            fbErr.code === 'auth/invalid-email';
+
+          if (!isLegacyFallback) {
+            throw fbErr;
+          }
+        }
+      }
+
+      // Path B: ServeEase Legacy OTP Recovery
       const res = await authApi.forgotPassword(emailCheck.normalized);
       if (res && res.success) {
         setSuccessMsg(res.message || 'If an account exists with that email, a verification code has been sent.');

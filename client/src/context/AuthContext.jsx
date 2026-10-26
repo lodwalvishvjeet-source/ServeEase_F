@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { authApi, userApi } from '../services/api';
+import { auth } from '../config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import {
+  firebaseSignInWithEmail,
+  firebaseRegisterWithEmail,
+  firebaseSignInWithGoogle,
+  firebaseSignOut,
+  isFirebaseReady
+} from '../services/firebaseAuth';
 
 const AuthContext = createContext(null);
 
@@ -60,6 +69,7 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = useCallback(async (reason = null) => {
     try {
+      await firebaseSignOut().catch(() => {});
       await authApi.logout();
     } catch (err) {
       console.warn('Logout API request error:', err.message);
@@ -82,6 +92,17 @@ export const AuthProvider = ({ children }) => {
   // Initial mount authentication check (runs strictly ONCE on mount)
   useEffect(() => {
     checkAuthStatus(false);
+  }, [checkAuthStatus]);
+
+  // Synchronize Firebase auth state if available
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser && !userRef.current) {
+        checkAuthStatus(true);
+      }
+    });
+    return () => unsubscribe();
   }, [checkAuthStatus]);
 
   // Idle detection and activity tracking listeners
@@ -150,10 +171,38 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Login with email, password, and optional role
+   * Tries Firebase Authentication first if available, with graceful fallback to legacy MongoDB auth
    */
   const login = async (email, password, role) => {
     setAuthError(null);
     try {
+      if (isFirebaseReady()) {
+        try {
+          const { idToken } = await firebaseSignInWithEmail(email, password);
+          const data = await authApi.firebaseLogin(idToken, { role });
+          if (data && data.success && data.user) {
+            setUser(data.user);
+            try {
+              localStorage.setItem('serveease_last_activity', String(Date.now()));
+            } catch {
+              // ignore
+            }
+            return data.user;
+          }
+        } catch (fbErr) {
+          // If Firebase rejects credentials because user was created pre-Firebase in legacy database,
+          // fallback to legacy login
+          const isUserNotFoundInFirebase =
+            fbErr.code === 'auth/user-not-found' ||
+            fbErr.code === 'auth/invalid-credential';
+
+          if (!isUserNotFoundInFirebase) {
+            throw fbErr;
+          }
+        }
+      }
+
+      // Legacy fallback
       const data = await authApi.login(email, password, role);
       if (!data || !data.success) {
         throw new Error(data?.error || 'Authentication failed. Please verify your credentials.');
@@ -172,11 +221,61 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Register a customer or provider account
+   * Sign In or Sign Up with Google
+   */
+  const loginWithGoogle = async (role = 'customer', profileData = {}) => {
+    setAuthError(null);
+    try {
+      if (!isFirebaseReady()) {
+        throw new Error('Google Sign-In is not configured. Please check client Firebase environment variables.');
+      }
+      const { idToken } = await firebaseSignInWithGoogle();
+      const data = await authApi.firebaseLogin(idToken, { role, ...profileData });
+      if (!data || !data.success || !data.user) {
+        throw new Error(data?.error || 'Failed to authenticate with Google.');
+      }
+      setUser(data.user);
+      try {
+        localStorage.setItem('serveease_last_activity', String(Date.now()));
+      } catch {
+        // ignore
+      }
+      return data.user;
+    } catch (err) {
+      setAuthError(err.message);
+      throw err;
+    }
+  };
+
+  /**
+   * Register a customer or provider account (supports both Firebase and legacy flow)
    */
   const register = async (userData) => {
     setAuthError(null);
     try {
+      if (isFirebaseReady() && userData.password) {
+        try {
+          const { idToken } = await firebaseRegisterWithEmail(userData.email, userData.password);
+          const data = await authApi.firebaseLogin(idToken, userData);
+          if (data && data.success && data.user) {
+            setUser(data.user);
+            try {
+              localStorage.setItem('serveease_last_activity', String(Date.now()));
+            } catch {
+              // ignore
+            }
+            return data;
+          }
+        } catch (fbErr) {
+          // If Firebase creation fails due to existing email or config, surface cleanly
+          if (fbErr.code === 'auth/email-already-in-use') {
+            throw new Error('An account with this email address already exists. Please sign in instead.');
+          }
+          throw fbErr;
+        }
+      }
+
+      // Standard legacy registration
       const data = await authApi.register(userData);
       if (!data || !data.success) {
         throw new Error(data?.error || 'Registration failed. Please check form details.');
@@ -225,11 +324,13 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     role: user?.role || null,
     login,
+    loginWithGoogle,
     register,
     logout,
     updateProfile,
     verifyEmailOtp,
-    refreshUser: checkAuthStatus
+    refreshUser: checkAuthStatus,
+    isFirebaseReady: isFirebaseReady()
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

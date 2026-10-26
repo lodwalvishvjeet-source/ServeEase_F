@@ -30,7 +30,7 @@ import { connectSocket } from '../services/socket';
 /**
  * Status Badge Helpers
  */
-const getStatusBadge = (status) => {
+const getStatusBadge = (status, booking = null, currentUserId = null) => {
   switch (status) {
     case 'pending':
       return {
@@ -39,7 +39,7 @@ const getStatusBadge = (status) => {
       };
     case 'accepted':
       return {
-        label: 'Confirmed / Accepted',
+        label: 'Confirmed',
         className: 'badge-accepted'
       };
     case 'in_progress':
@@ -52,11 +52,16 @@ const getStatusBadge = (status) => {
         label: 'Completed',
         className: 'badge-completed'
       };
-    case 'cancelled':
+    case 'cancelled': {
+      const isCancelledByMe = booking?.cancelledBy && currentUserId && (
+        String(booking.cancelledBy) === String(currentUserId) ||
+        String(booking.cancelledBy?._id) === String(currentUserId)
+      );
       return {
-        label: 'Cancelled',
+        label: isCancelledByMe ? 'Cancelled by You' : 'Cancelled',
         className: 'badge-cancelled'
       };
+    }
     case 'rejected':
       return {
         label: 'Declined by Technician',
@@ -267,22 +272,24 @@ export default function CustomerBookings() {
     }
   };
 
-  // Filter bookings based on activeTab
-  const filteredBookings = bookings.filter(b => {
+  // Filter bookings based on activeTab (Consolidated Option A)
+  const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'all') return true;
+    if (activeTab === 'active') return ['pending', 'accepted', 'in_progress'].includes(b.status);
+    if (activeTab === 'completed') return b.status === 'completed';
+    if (activeTab === 'cancelled') return ['cancelled', 'rejected'].includes(b.status);
+    // Legacy direct fallbacks
     if (activeTab === 'pending') return b.status === 'pending';
     if (activeTab === 'accepted') return b.status === 'accepted';
     if (activeTab === 'in_progress') return b.status === 'in_progress';
-    if (activeTab === 'completed') return b.status === 'completed';
-    if (activeTab === 'cancelled') return b.status === 'cancelled';
     if (activeTab === 'rejected') return b.status === 'rejected';
     return true;
   });
 
   return (
     <DashboardLayout
-      title="My Service Bookings"
-      subtitle="Track scheduled technician visits, inspect service receipts, and manage appointments"
+      title="Service Bookings"
+      subtitle="Track and manage your appointments"
     >
       <div className="customer-bookings-content">
 
@@ -318,12 +325,9 @@ export default function CustomerBookings() {
           }}>
             {[
               { id: 'all', label: `All (${bookings.length})` },
-              { id: 'pending', label: `Pending (${bookings.filter(b => b.status === 'pending').length})` },
-              { id: 'accepted', label: `Accepted (${bookings.filter(b => b.status === 'accepted').length})` },
-              { id: 'in_progress', label: `In Progress (${bookings.filter(b => b.status === 'in_progress').length})` },
+              { id: 'active', label: `Active (${bookings.filter(b => ['pending', 'accepted', 'in_progress'].includes(b.status)).length})` },
               { id: 'completed', label: `Completed (${bookings.filter(b => b.status === 'completed').length})` },
-              { id: 'cancelled', label: `Cancelled (${bookings.filter(b => b.status === 'cancelled').length})` },
-              { id: 'rejected', label: `Rejected (${bookings.filter(b => b.status === 'rejected').length})` }
+              { id: 'cancelled', label: `Cancelled (${bookings.filter(b => ['cancelled', 'rejected'].includes(b.status)).length})` }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -421,7 +425,7 @@ export default function CustomerBookings() {
         {!loading && !error && filteredBookings.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {filteredBookings.map((b) => {
-              const statusBadge = getStatusBadge(b.status);
+              const statusBadge = getStatusBadge(b.status, b, user?._id);
               const providerObj = b.provider || {};
               const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80';
               const canCancel = ['pending', 'accepted'].includes(b.status);
@@ -562,31 +566,57 @@ export default function CustomerBookings() {
                     </div>
                   )}
 
-                  {b.rejectionReason && (
+                  {/* Technician Declined Indicator */}
+                  {b.status === 'rejected' && (
                     <div style={{
-                      backgroundColor: 'var(--color-danger-bg)',
+                      backgroundColor: 'var(--color-danger-bg, #fef2f2)',
                       padding: '0.75rem 1rem',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.85rem',
-                      color: 'var(--color-danger)',
+                      borderRadius: 'var(--radius-md, 8px)',
+                      fontSize: '0.86rem',
+                      color: 'var(--color-danger, #b91c1c)',
                       marginBottom: '1rem',
-                      border: '1px solid var(--color-border)'
+                      border: '1px solid var(--color-border, #fecaca)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.55rem'
                     }}>
-                      <strong>Technician Decline Reason:</strong> "{b.rejectionReason}"
+                      <XCircle size={17} style={{ flexShrink: 0 }} />
+                      <div>
+                        <strong>Declined by Technician</strong>
+                        {b.rejectionReason ? (
+                          <span> — Reason: "{b.rejectionReason}"</span>
+                        ) : (
+                          <span style={{ opacity: 0.9 }}> — The technician was unavailable to accept this appointment.</span>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {b.cancellationReason && (
+                  {/* Cancelled Indicator (Distinguishes between user vs technician cancellation) */}
+                  {b.status === 'cancelled' && (
                     <div style={{
-                      backgroundColor: 'var(--color-danger-bg)',
+                      backgroundColor: 'var(--color-bg-subtle, #f8fafc)',
                       padding: '0.75rem 1rem',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.85rem',
-                      color: 'var(--color-danger)',
+                      borderRadius: 'var(--radius-md, 8px)',
+                      fontSize: '0.86rem',
+                      color: 'var(--color-text-body, #334155)',
                       marginBottom: '1rem',
-                      border: '1px solid var(--color-border)'
+                      border: '1px solid var(--color-border, #e2e8f0)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.55rem'
                     }}>
-                      <strong>Cancellation Note:</strong> "{b.cancellationReason}"
+                      <AlertCircle size={17} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+                      <div>
+                        <strong>
+                          {b.cancelledBy && user?._id && (String(b.cancelledBy) === String(user._id) || String(b.cancelledBy?._id) === String(user._id))
+                            ? 'Cancelled by You'
+                            : 'Appointment Cancelled'}
+                        </strong>
+                        {b.cancellationReason && (
+                          <span style={{ color: 'var(--color-text-muted)' }}> — Note: "{b.cancellationReason}"</span>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -698,35 +728,32 @@ export default function CustomerBookings() {
                   {/* Actions Bar */}
                   <div style={{
                     display: 'flex',
-                    justifyContent: 'space-between',
+                    justifyContent: canCancel ? 'space-between' : 'flex-end',
                     alignItems: 'center',
                     borderTop: '1px solid var(--color-border)',
                     paddingTop: '0.85rem',
                     flexWrap: 'wrap',
                     gap: '0.75rem'
                   }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-                      Request ID: <code style={{ color: 'var(--color-text-body)' }}>{b._id}</code>
-                    </span>
+                    {canCancel && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancellingId(b._id);
+                          setCancelReason('');
+                          setActionError(null);
+                        }}
+                        className="btn btn-outline btn-sm"
+                        style={{
+                          color: 'var(--color-danger)',
+                          borderColor: 'var(--color-border)'
+                        }}
+                      >
+                        <XCircle size={14} /> Cancel Appointment
+                      </button>
+                    )}
 
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {canCancel && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCancellingId(b._id);
-                            setCancelReason('');
-                            setActionError(null);
-                          }}
-                          className="btn btn-outline btn-sm"
-                          style={{
-                            color: 'var(--color-danger)',
-                            borderColor: 'var(--color-border)'
-                          }}
-                        >
-                          <XCircle size={14} /> Cancel Appointment
-                        </button>
-                      )}
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginLeft: canCancel ? '0' : 'auto' }}>
 
                       {/* Booking-based Map & Location Sharing Action */}
                       {(() => {

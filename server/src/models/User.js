@@ -33,8 +33,16 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: [true, 'Password hash is required'],
+      required: false,
+      default: null,
       select: false // Excluded by default in queries for security
+    },
+    firebaseUid: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      default: null
     },
     role: {
       type: String,
@@ -208,7 +216,7 @@ const userSchema = new mongoose.Schema(
  */
 userSchema.methods.comparePassword = async function (candidatePassword) {
   if (!this.passwordHash) {
-    throw new Error('Password hash is not loaded on this user document');
+    return false;
   }
   return await bcrypt.compare(candidatePassword, this.passwordHash);
 };

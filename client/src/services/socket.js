@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
 import { API_BASE_URL } from './api';
+import { auth } from '../config/firebase';
 
 let socketInstance = null;
 
@@ -49,11 +50,20 @@ export const getSocket = (token) => {
     socketInstance.auth = { token };
   }
 
+  // Update socket token asynchronously if Firebase user is logged in
+  if (!token && auth?.currentUser) {
+    auth.currentUser.getIdToken().then((fbToken) => {
+      if (socketInstance && fbToken) {
+        socketInstance.auth = { token: fbToken };
+      }
+    }).catch(() => {});
+  }
+
   return socketInstance;
 };
 
 /**
- * Connect socket instance
+ * Connect socket instance (synchronous)
  */
 export const connectSocket = (token) => {
   const socket = getSocket(token);
