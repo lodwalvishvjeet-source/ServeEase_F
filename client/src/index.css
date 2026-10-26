@@ -2680,4 +2680,189 @@ table tbody tr:hover td,
   animation: fadeInUp 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ==========================================================================
+   Ambient Centered Auth Layout (Option B)
+   ========================================================================== */
+.ambient-auth-wrapper {
+  min-height: calc(100vh - 70px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg-page);
+}
+
+.ambient-glow-1 {
+  position: absolute;
+  top: 5%;
+  left: 15%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-glow-2 {
+  position: absolute;
+  bottom: 10%;
+  right: 15%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0) 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-auth-card {
+  width: 100%;
+  max-width: 620px;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 2.75rem 2.5rem;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.02);
+  position: relative;
+  z-index: 1;
+}
+
+/* Interactive Role Selection Cards */
+.role-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.role-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-border);
+  background: var(--color-bg-page);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.role-card-btn:hover {
+  border-color: var(--primary-300);
+  background-color: var(--color-bg-subtle);
+  transform: translateY(-2px);
+}
+
+.role-card-btn.active {
+  border-color: var(--primary-600);
+  background-color: var(--primary-50);
+  box-shadow: 0 4px 14px -3px rgba(16, 185, 129, 0.25);
+}
+
+[data-theme='dark'] .role-card-btn.active,
+.dark .role-card-btn.active {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: var(--primary-500);
+}
+
+.role-card-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-card);
+  color: var(--color-text-muted);
+  margin-bottom: 0.65rem;
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.role-card-btn.active .role-card-icon-box {
+  background: var(--primary-600);
+  color: #ffffff;
+  border-color: var(--primary-600);
+}
+
+.role-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-title);
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.role-card-desc {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-with-icon .input-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-with-icon .form-input {
+  padding-left: 2.45rem;
+}
+
+.city-quick-chip {
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-body);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.city-quick-chip:hover {
+  border-color: var(--primary-500);
+  color: var(--primary-600);
+  background: var(--primary-50);
+}
+
+.city-quick-chip.selected {
+  background-color: var(--primary-100);
+  border-color: var(--primary-600);
+  color: var(--primary-800);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .ambient-auth-card {
+    padding: 1.75rem 1.25rem;
+    border-radius: var(--radius-lg);
+  }
+  .role-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 

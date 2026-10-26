@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Briefcase, AlertCircle, UserPlus, MapPin } from 'lucide-react';
+import { 
+  User, 
+  Briefcase, 
+  AlertCircle, 
+  UserPlus, 
+  MapPin, 
+  Mail, 
+  Phone, 
+  CheckCircle2, 
+  Sparkles 
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import PasswordInput from '../components/common/PasswordInput';
@@ -10,8 +20,8 @@ import { SUPPORTED_CITIES } from '../data/cities';
 import { validateEmail, validateIndianMobile } from '../utils/validation';
 
 /**
- * Register Page Component
- * Connects with Express Registration API & MongoDB Atlas
+ * Register Page Component (Option B: Ambient Centered Card with Interactive Role Cards)
+ * Connects with Express Registration API, Firebase Auth & MongoDB Atlas
  * Supports Customer and Service Provider roles with city-based normalization.
  */
 export default function Register() {
@@ -193,42 +203,75 @@ export default function Register() {
   };
 
   return (
-    <div className="auth-container" style={{ maxWidth: '580px' }}>
-      <div className="auth-card">
+    <div className="ambient-auth-wrapper">
+      {/* Ambient background glows */}
+      <div className="ambient-glow-1" />
+      <div className="ambient-glow-2" />
+
+      <div className="ambient-auth-card">
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>
-            Account Registration
-          </span>
-          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>Create Your Account</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Join ServeEase to book verified technicians or offer your skilled services
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            backgroundColor: 'var(--primary-50)',
+            color: 'var(--primary-700)',
+            padding: '0.35rem 0.85rem',
+            borderRadius: '9999px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            marginBottom: '0.65rem'
+          }}>
+            <Sparkles size={14} style={{ color: 'var(--primary-600)' }} />
+            <span>Join ServeEase</span>
+          </div>
+          <h1 style={{ fontSize: '1.85rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--color-text-title)' }}>
+            Create Your Account
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.92rem', margin: 0 }}>
+            Reliable local technicians and home repairs on demand
           </p>
         </div>
 
-        {/* Role Selection Tabs */}
-        <div className="auth-tabs" role="tablist">
+        {/* Interactive Role Selection Cards */}
+        <div className="role-cards-grid" role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={role === 'customer'}
-            className={`auth-tab-btn ${role === 'customer' ? 'active' : ''}`}
+            className={`role-card-btn ${role === 'customer' ? 'active' : ''}`}
             onClick={() => setRole('customer')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-              <User size={16} /> I Need Services (Customer)
-            </span>
+            <div className="role-card-icon-box">
+              <User size={18} />
+            </div>
+            <div className="role-card-title">
+              <span>I Need Services</span>
+              {role === 'customer' && <CheckCircle2 size={16} style={{ color: 'var(--primary-600)' }} />}
+            </div>
+            <div className="role-card-desc">
+              Book verified local technicians for home repairs & maintenance
+            </div>
           </button>
+
           <button
             type="button"
             role="tab"
             aria-selected={role === 'provider'}
-            className={`auth-tab-btn ${role === 'provider' ? 'active' : ''}`}
+            className={`role-card-btn ${role === 'provider' ? 'active' : ''}`}
             onClick={() => setRole('provider')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-              <Briefcase size={16} /> I Offer Services (Provider)
-            </span>
+            <div className="role-card-icon-box">
+              <Briefcase size={18} />
+            </div>
+            <div className="role-card-title">
+              <span>I Offer Services</span>
+              {role === 'provider' && <CheckCircle2 size={16} style={{ color: 'var(--primary-600)' }} />}
+            </div>
+            <div className="role-card-desc">
+              Get booked for jobs and expand your professional service business
+            </div>
           </button>
         </div>
 
@@ -241,7 +284,7 @@ export default function Register() {
         )}
 
         {/* Google Quick Sign-Up */}
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
           <button
             type="button"
             onClick={handleGoogleSignUp}
@@ -253,7 +296,7 @@ export default function Register() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.75rem',
-              padding: '0.7rem 1rem',
+              padding: '0.75rem 1rem',
               fontWeight: 600,
               fontSize: '0.92rem',
               backgroundColor: 'var(--color-bg-card, #ffffff)',
@@ -261,7 +304,8 @@ export default function Register() {
               border: '1px solid var(--color-border, #cbd5e1)',
               borderRadius: 'var(--radius-md, 8px)',
               cursor: 'pointer',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              boxShadow: 'var(--shadow-xs)'
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
@@ -288,7 +332,7 @@ export default function Register() {
           <div style={{ display: 'flex', alignItems: 'center', margin: '1.25rem 0', color: 'var(--color-text-muted)' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-border, #e2e8f0)' }} />
             <span style={{ padding: '0 0.75rem', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              or register with email
+              or continue with email
             </span>
             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-border, #e2e8f0)' }} />
           </div>
@@ -300,16 +344,19 @@ export default function Register() {
             <label className="form-label" htmlFor="register-name">
               Full Name <span className="required">*</span>
             </label>
-            <input
-              id="register-name"
-              type="text"
-              className="form-input"
-              placeholder={role === 'customer' ? 'e.g. Priya Sharma' : 'e.g. Rajesh Kumar'}
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+            <div className="input-with-icon">
+              <User size={16} className="input-icon" />
+              <input
+                id="register-name"
+                type="text"
+                className="form-input"
+                placeholder={role === 'customer' ? 'e.g. Priya Sharma' : 'e.g. Rajesh Kumar'}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
           </div>
 
           <div className="grid-2">
@@ -317,18 +364,21 @@ export default function Register() {
               <label className="form-label" htmlFor="register-email">
                 Email Address <span className="required">*</span>
               </label>
-              <input
-                id="register-email"
-                type="email"
-                className="form-input"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="input-with-icon">
+                <Mail size={16} className="input-icon" />
+                <input
+                  id="register-email"
+                  type="email"
+                  className="form-input"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
               {emailValidation && !emailValidation.isValid && (
-                <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', marginTop: '0.2rem' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', marginTop: '0.2rem', display: 'block' }}>
                   {emailValidation.error}
                 </span>
               )}
@@ -338,16 +388,19 @@ export default function Register() {
               <label className="form-label" htmlFor="register-phone">
                 Phone Number <span className="required">*</span>
               </label>
-              <input
-                id="register-phone"
-                type="tel"
-                className="form-input"
-                placeholder="Phone number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="input-with-icon">
+                <Phone size={16} className="input-icon" />
+                <input
+                  id="register-phone"
+                  type="tel"
+                  className="form-input"
+                  placeholder="10-digit number"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
             </div>
           </div>
 
@@ -373,24 +426,39 @@ export default function Register() {
               <label className="form-label" htmlFor="customer-city">
                 Your City <span className="required">*</span>
               </label>
-              <select
-                id="customer-city"
-                className="form-input"
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-                required
-                disabled={isLoading}
-              >
-                <option value="">-- Select Your City --</option>
+              <div className="input-with-icon" style={{ marginBottom: '0.5rem' }}>
+                <MapPin size={16} className="input-icon" />
+                <select
+                  id="customer-city"
+                  className="form-input"
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  required
+                  disabled={isLoading}
+                >
+                  <option value="">-- Select Your City --</option>
+                  {SUPPORTED_CITIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Quick Pick City Chips */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Quick Pick:</span>
                 {SUPPORTED_CITIES.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`city-quick-chip ${selectedCity === c.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedCity(c.id)}
+                  >
                     {c.name}
-                  </option>
+                  </button>
                 ))}
-              </select>
-              <small style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <MapPin size={13} /> Showing providers available in your local municipal area
-              </small>
+              </div>
             </div>
           )}
 
@@ -412,19 +480,22 @@ export default function Register() {
                   <label className="form-label" htmlFor="provider-city">
                     Operating City <span className="required">*</span>
                   </label>
-                  <select
-                    id="provider-city"
-                    className="form-input"
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    disabled={isLoading}
-                    required
-                  >
-                    <option value="">-- Select Operating City --</option>
-                    {SUPPORTED_CITIES.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <div className="input-with-icon">
+                    <MapPin size={16} className="input-icon" />
+                    <select
+                      id="provider-city"
+                      className="form-input"
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      disabled={isLoading}
+                      required
+                    >
+                      <option value="">-- Select Operating City --</option>
+                      {SUPPORTED_CITIES.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="form-group">
