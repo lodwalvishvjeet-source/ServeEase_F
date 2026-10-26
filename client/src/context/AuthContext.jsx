@@ -248,34 +248,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Register a customer or provider account (supports both Firebase and legacy flow)
+   * Register a customer or provider account (dispatches 6-digit email verification code)
    */
   const register = async (userData) => {
     setAuthError(null);
     try {
-      if (isFirebaseReady() && userData.password) {
-        try {
-          const { idToken } = await firebaseRegisterWithEmail(userData.email, userData.password);
-          const data = await authApi.firebaseLogin(idToken, userData);
-          if (data && data.success && data.user) {
-            setUser(data.user);
-            try {
-              localStorage.setItem('serveease_last_activity', String(Date.now()));
-            } catch {
-              // ignore
-            }
-            return data;
-          }
-        } catch (fbErr) {
-          // If Firebase creation fails due to existing email or config, surface cleanly
-          if (fbErr.code === 'auth/email-already-in-use') {
-            throw new Error('An account with this email address already exists. Please sign in instead.');
-          }
-          throw fbErr;
-        }
-      }
-
-      // Standard legacy registration
+      // Standard registration creates pending user and sends 6-digit email verification code
       const data = await authApi.register(userData);
       if (!data || !data.success) {
         throw new Error(data?.error || 'Registration failed. Please check form details.');

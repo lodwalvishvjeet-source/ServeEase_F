@@ -219,44 +219,29 @@ export default function Register() {
           </p>
         </div>
 
-        {/* Interactive Role Selection Cards */}
-        <div className="role-cards-grid" role="tablist">
+        {/* Role Selection Tabs */}
+        <div className="auth-tabs" role="tablist" style={{ marginBottom: '1.5rem' }}>
           <button
             type="button"
             role="tab"
             aria-selected={role === 'customer'}
-            className={`role-card-btn ${role === 'customer' ? 'active' : ''}`}
+            className={`auth-tab-btn ${role === 'customer' ? 'active' : ''}`}
             onClick={() => setRole('customer')}
           >
-            <div className="role-card-icon-box">
-              <User size={18} />
-            </div>
-            <div className="role-card-title">
-              <span>I Need Services</span>
-              {role === 'customer' && <CheckCircle2 size={16} style={{ color: 'var(--primary-600)' }} />}
-            </div>
-            <div className="role-card-desc">
-              Book verified local technicians for home repairs & maintenance
-            </div>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+              <User size={16} /> I Need Services (Customer)
+            </span>
           </button>
-
           <button
             type="button"
             role="tab"
             aria-selected={role === 'provider'}
-            className={`role-card-btn ${role === 'provider' ? 'active' : ''}`}
+            className={`auth-tab-btn ${role === 'provider' ? 'active' : ''}`}
             onClick={() => setRole('provider')}
           >
-            <div className="role-card-icon-box">
-              <Briefcase size={18} />
-            </div>
-            <div className="role-card-title">
-              <span>I Offer Services</span>
-              {role === 'provider' && <CheckCircle2 size={16} style={{ color: 'var(--primary-600)' }} />}
-            </div>
-            <div className="role-card-desc">
-              Get booked for jobs and expand your professional service business
-            </div>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+              <Briefcase size={16} /> I Offer Services (Provider)
+            </span>
           </button>
         </div>
 

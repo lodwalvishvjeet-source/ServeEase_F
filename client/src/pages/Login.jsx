@@ -242,23 +242,23 @@ export default function Login() {
               required
               autoComplete="current-password"
             />
-            {/* Forgot Password Link */}
-            <div style={{ marginBottom: '0.75rem', textAlign: 'right' }}>
-              <Link to="/forgot-password" className="forgot-link" style={{ fontSize: '0.85rem', color: 'var(--primary-600)' }}>Forgot password?</Link>
-            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
-            <input
-              type="checkbox"
-              id="remember-me"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              style={{ accentColor: 'var(--primary-600)', width: '1.05rem', height: '1.05rem', cursor: 'pointer' }}
-            />
-            <label htmlFor="remember-me" style={{ color: 'var(--color-text-body)', cursor: 'pointer', userSelect: 'none' }}>
-              Remember this device
+          {/* Remember Me & Forgot Password Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            <label htmlFor="remember-me" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--color-text-body)', cursor: 'pointer', userSelect: 'none', margin: 0, fontWeight: 500 }}>
+              <input
+                type="checkbox"
+                id="remember-me"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ accentColor: 'var(--primary-600)', width: '1rem', height: '1rem', cursor: 'pointer' }}
+              />
+              Remember me
             </label>
+            <Link to="/forgot-password" className="forgot-link" style={{ fontSize: '0.85rem', color: 'var(--primary-600)', textDecoration: 'none', fontWeight: 500 }}>
+              Forgot password?
+            </Link>
           </div>
 
           <Button type="submit" variant="primary" size="lg" block disabled={isLoading} loading={isLoading}>

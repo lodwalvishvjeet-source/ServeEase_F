@@ -2686,11 +2686,12 @@ table tbody tr:hover td,
 .ambient-auth-wrapper {
   min-height: calc(100vh - 70px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 3rem 1.5rem;
+  padding: 2.5rem 1.5rem 4rem;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background-color: var(--color-bg-page);
 }
 
