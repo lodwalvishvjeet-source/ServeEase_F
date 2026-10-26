@@ -738,6 +738,20 @@ export const adminApi = {
     });
   },
 
+  updateBookingMessage: async (id, data) => {
+    return request(`/api/admin/bookings/${encodeURIComponent(id)}/message`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteBooking: async (id, data = {}) => {
+    return request(`/api/admin/bookings/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      body: JSON.stringify(data)
+    });
+  },
+
   getReviews: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return request(`/api/admin/reviews${query ? `?${query}` : ''}`, {

@@ -9,6 +9,8 @@ import {
   getAdminProviders,
   verifyProvider,
   getAdminBookings,
+  updateBookingMessage,
+  deleteBooking,
   getAdminReviews,
   moderateReview,
   getAdminAuditLogs
@@ -42,8 +44,10 @@ router.patch('/providers/:id/verify', verifyProvider);
 router.get('/providers/:id/documents', getProviderDocumentsForAdmin);
 router.get('/documents/:id', getDocumentById);
 
-// 4. Booking Oversight (Read-only)
+// 4. Booking Oversight & Content Moderation
 router.get('/bookings', getAdminBookings);
+router.patch('/bookings/:id/message', updateBookingMessage);
+router.delete('/bookings/:id', deleteBooking);
 
 // 5. Review Moderation & Report Handling
 router.get('/reviews', getAdminReviews);

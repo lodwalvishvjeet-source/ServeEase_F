@@ -1261,3 +1261,119 @@ export const getAdminAuditLogs = async (req, res, next) => {
     return next(error);
   }
 };
+
+/**
+ * PATCH /api/admin/bookings/:id/message
+ * Edit customer instructions/message (description) to redact sensitive or dangerous content
+ */
+export const updateBookingMessage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { message, description, reason } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid booking identifier.' });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking appointment not found.' });
+    }
+
+    const newMessage = message !== undefined ? message : (description !== undefined ? description : '');
+    const previousMessage = booking.description || '';
+
+    booking.description = (newMessage || '').trim();
+    await booking.save();
+
+    // Record audit log
+    await AuditLog.create({
+      admin: req.user._id,
+      adminName: req.user.name,
+      adminEmail: req.user.email,
+      action: 'booking_message_edited',
+      targetId: booking._id,
+      targetType: 'Booking',
+      reason: (reason || 'Redacted sensitive/inappropriate message, payment credentials, or personal numbers').trim(),
+      details: {
+        previousMessage,
+        newMessage: booking.description,
+        bookingId: booking._id,
+        customerId: booking.customer,
+        providerId: booking.provider
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking message successfully updated.',
+      booking: {
+        _id: booking._id,
+        description: booking.description,
+        updatedAt: booking.updatedAt
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * DELETE /api/admin/bookings/:id
+ * Delete a booking appointment (e.g. fraudulent, harmful or invalid booking)
+ */
+export const deleteBooking = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body || req.query || {};
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid booking identifier.' });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking appointment not found.' });
+    }
+
+    // Capture details before deletion for audit trail
+    const bookingDetails = {
+      serviceName: booking.serviceName,
+      status: booking.status,
+      customer: booking.customer,
+      provider: booking.provider,
+      bookingDate: booking.bookingDate,
+      bookingTime: booking.bookingTime,
+      price: booking.price,
+      description: booking.description
+    };
+
+    // Remove reviews associated with this booking if any
+    await Review.deleteMany({ booking: booking._id });
+
+    // Remove notifications referencing this booking if any
+    await Notification.deleteMany({ bookingId: booking._id });
+
+    // Delete booking
+    await Booking.findByIdAndDelete(id);
+
+    // Record audit log
+    await AuditLog.create({
+      admin: req.user._id,
+      adminName: req.user.name,
+      adminEmail: req.user.email,
+      action: 'booking_deleted',
+      targetId: booking._id,
+      targetType: 'Booking',
+      reason: (reason || 'Deleted by administrator due to policy violation or security risk').trim(),
+      details: bookingDetails
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking has been permanently removed.'
+    });
+  } catch (error) {
+    return next(error);
+  }
+};

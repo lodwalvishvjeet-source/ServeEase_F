@@ -39,7 +39,9 @@ import {
   ExternalLink,
   FileCheck,
   History,
-  User
+  User,
+  Edit3,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -448,6 +450,77 @@ export default function AdminDashboard() {
       fetchBookings();
     }
   }, [activeTab, fetchBookings]);
+
+  // Booking Moderation & Content Management State
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [bookingMessageText, setBookingMessageText] = useState('');
+  const [bookingEditReason, setBookingEditReason] = useState('');
+  const [bookingEditSubmitting, setBookingEditSubmitting] = useState(false);
+  const [bookingEditError, setBookingEditError] = useState(null);
+
+  const [deletingBooking, setDeletingBooking] = useState(null);
+  const [bookingDeleteReason, setBookingDeleteReason] = useState('');
+  const [bookingDeleteSubmitting, setBookingDeleteSubmitting] = useState(false);
+  const [bookingDeleteError, setBookingDeleteError] = useState(null);
+
+  const handleOpenEditBookingMessage = (booking) => {
+    setEditingBooking(booking);
+    setBookingMessageText(booking.description || '');
+    setBookingEditReason('');
+    setBookingEditError(null);
+  };
+
+  const handleSaveBookingMessage = async () => {
+    if (!editingBooking) return;
+    setBookingEditSubmitting(true);
+    setBookingEditError(null);
+    try {
+      const res = await adminApi.updateBookingMessage(editingBooking._id, {
+        message: bookingMessageText,
+        reason: bookingEditReason
+      });
+      if (res?.success) {
+        setBookings(prev =>
+          prev.map(b => (b._id === editingBooking._id ? { ...b, description: bookingMessageText.trim() } : b))
+        );
+        setEditingBooking(null);
+      } else {
+        setBookingEditError(res?.error || 'Failed to update booking message.');
+      }
+    } catch (err) {
+      setBookingEditError(err.message || 'Error updating booking message.');
+    } finally {
+      setBookingEditSubmitting(false);
+    }
+  };
+
+  const handleOpenDeleteBooking = (booking) => {
+    setDeletingBooking(booking);
+    setBookingDeleteReason('');
+    setBookingDeleteError(null);
+  };
+
+  const handleConfirmDeleteBooking = async () => {
+    if (!deletingBooking) return;
+    setBookingDeleteSubmitting(true);
+    setBookingDeleteError(null);
+    try {
+      const res = await adminApi.deleteBooking(deletingBooking._id, {
+        reason: bookingDeleteReason
+      });
+      if (res?.success) {
+        setBookings(prev => prev.filter(b => b._id !== deletingBooking._id));
+        setBookingsTotal(prev => Math.max(0, prev - 1));
+        setDeletingBooking(null);
+      } else {
+        setBookingDeleteError(res?.error || 'Failed to delete booking.');
+      }
+    } catch (err) {
+      setBookingDeleteError(err.message || 'Error deleting booking.');
+    } finally {
+      setBookingDeleteSubmitting(false);
+    }
+  };
 
   // ========================================================
   // 5. REVIEWS & REPORTS MODERATION STATE
@@ -1798,24 +1871,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenProfileModal(p)}
-                        className="btn btn-sm btn-outline"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          borderColor: '#cbd5e1',
-                          color: 'var(--color-text-title)'
-                        }}
-                        title="View complete provider profile, stats & credentials"
-                      >
-                        <Eye size={14} />
-                        <span>View Profile</span>
-                      </button>
-
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button
                         type="button"
                         onClick={() => openVerifyModal(p, true)}
@@ -1928,6 +1984,7 @@ export default function AdminDashboard() {
                     <th>City & Locality</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Price</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1938,51 +1995,23 @@ export default function AdminDashboard() {
                         <span style={{ fontSize: 'var(--font-size-xs, 0.78rem)', color: 'var(--color-text-muted)' }}>
                           {b.bookingDate} at {b.bookingTime}
                         </span>
+                        {b.description ? (
+                          <div style={{ marginTop: '0.35rem', fontSize: '0.76rem', color: '#334155', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #e2e8f0', maxWidth: '280px' }}>
+                            <span style={{ fontWeight: 600, color: '#0f172a' }}>Message: </span>
+                            <span style={{ wordBreak: 'break-word' }}>{b.description}</span>
+                          </div>
+                        ) : (
+                          <div style={{ marginTop: '0.25rem', fontSize: '0.74rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                            No message attached
+                          </div>
+                        )}
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          onClick={() => b.customer?._id && handleOpenProfileModal(b.customer)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            textAlign: 'left',
-                            cursor: b.customer?._id ? 'pointer' : 'default',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                          title={b.customer?._id ? "Inspect customer profile" : ""}
-                        >
-                          <span style={{ color: b.customer?._id ? 'var(--primary-700)' : 'var(--color-text-body)', fontWeight: 600 }}>
-                            {b.customer?.name || 'Customer'}
-                          </span>
-                          {b.customer?._id && <Eye size={11} style={{ color: 'var(--primary-600)' }} />}
-                        </button>
+                        <span style={{ color: 'var(--color-text-body)', fontWeight: 600 }}>{b.customer?.name || 'Customer'}</span>
                         <div style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>{b.customer?.email}</div>
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          onClick={() => b.provider?._id && handleOpenProfileModal(b.provider)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            textAlign: 'left',
-                            cursor: b.provider?._id ? 'pointer' : 'default',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                          title={b.provider?._id ? "Inspect provider profile" : ""}
-                        >
-                          <span style={{ color: b.provider?._id ? 'var(--primary-700)' : 'var(--color-text-body)', fontWeight: 600 }}>
-                            {b.provider?.name || 'Provider'}
-                          </span>
-                          {b.provider?._id && <Eye size={11} style={{ color: 'var(--primary-600)' }} />}
-                        </button>
+                        <span style={{ color: 'var(--color-text-body)', fontWeight: 600 }}>{b.provider?.name || 'Provider'}</span>
                         <div style={{ fontSize: 'var(--font-size-2xs, 0.76rem)', color: 'var(--color-text-muted)' }}>{b.provider?.providerDetails?.title || b.category}</div>
                       </td>
                       <td>
@@ -2003,6 +2032,45 @@ export default function AdminDashboard() {
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text-title)' }}>
                         ₹{b.price}
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditBookingMessage(b)}
+                            className="btn btn-outline btn-sm"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.25rem 0.55rem',
+                              fontSize: '0.78rem'
+                            }}
+                            title="Edit or redact customer booking message"
+                          >
+                            <Edit3 size={12} />
+                            <span>Edit Msg</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDeleteBooking(b)}
+                            className="btn btn-sm"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.25rem 0.55rem',
+                              fontSize: '0.78rem',
+                              backgroundColor: '#fee2e2',
+                              color: '#991b1b',
+                              border: '1px solid #fca5a5'
+                            }}
+                            title="Permanently delete booking"
+                          >
+                            <Trash2 size={12} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -3455,6 +3523,238 @@ export default function AdminDashboard() {
                 }}
               >
                 {modSubmitting ? 'Saving...' : modStatus === 'hidden' ? 'Hide Review' : 'Restore Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: EDIT BOOKING MESSAGE / NOTES
+          ======================================================== */}
+      {editingBooking && (
+        <div
+          className="modal-backdrop"
+          onClick={() => !bookingEditSubmitting && setEditingBooking(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '540px',
+              width: '100%',
+              padding: '1.75rem',
+              backgroundColor: 'var(--color-bg-card)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--color-border)',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-title)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Edit3 size={18} style={{ color: 'var(--primary-600)' }} />
+                  Edit Customer Booking Message
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  {editingBooking.serviceName} • Customer: {editingBooking.customer?.name || 'Customer'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !bookingEditSubmitting && setEditingBooking(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{
+              padding: '0.75rem',
+              borderRadius: '6px',
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              color: '#1e40af',
+              fontSize: '0.82rem',
+              marginBottom: '1rem',
+              lineHeight: 1.4
+            }}>
+              <strong>Security & Moderation Notice:</strong> Redact direct phone numbers, external payment credentials (UPI/cards), or inappropriate content entered by the customer.
+            </div>
+
+            {bookingEditError && (
+              <div className="alert-box alert-danger" style={{ marginBottom: '1rem' }}>
+                <AlertCircle size={14} />
+                <span>{bookingEditError}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Customer Booking Message / Instructions
+              </label>
+              <textarea
+                rows={4}
+                value={bookingMessageText}
+                onChange={(e) => setBookingMessageText(e.target.value)}
+                placeholder="Enter moderated customer instructions (leave empty if removing sensitive text completely)..."
+                className="form-control"
+                style={{ width: '100%', resize: 'vertical', fontSize: '0.88rem' }}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Administrative Reason (Documented in Audit Trail)
+              </label>
+              <input
+                type="text"
+                value={bookingEditReason}
+                onChange={(e) => setBookingEditReason(e.target.value)}
+                placeholder="e.g. Redacted external phone number and payment handle"
+                className="form-control"
+                style={{ width: '100%', fontSize: '0.85rem' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" disabled={bookingEditSubmitting} onClick={() => setEditingBooking(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                disabled={bookingEditSubmitting}
+                onClick={handleSaveBookingMessage}
+              >
+                {bookingEditSubmitting ? 'Saving...' : 'Save Moderated Message'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: DELETE BOOKING CONFIRMATION
+          ======================================================== */}
+      {deletingBooking && (
+        <div
+          className="modal-backdrop"
+          onClick={() => !bookingDeleteSubmitting && setDeletingBooking(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              padding: '1.75rem',
+              backgroundColor: 'var(--color-bg-card)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid #fecdd3',
+              boxShadow: '0 20px 25px -5px rgba(220, 38, 38, 0.15)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#991b1b', fontWeight: 800 }}>
+                    Delete Booking Appointment
+                  </h3>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                    Permanent removal from platform records
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !bookingDeleteSubmitting && setDeletingBooking(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#94a3b8' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{
+              padding: '0.85rem',
+              borderRadius: '6px',
+              backgroundColor: '#fff1f2',
+              border: '1px solid #fecdd3',
+              fontSize: '0.85rem',
+              marginBottom: '1rem',
+              color: '#9f1239'
+            }}>
+              <strong>Warning:</strong> You are about to permanently delete booking <strong>"{deletingBooking.serviceName}"</strong> for customer <strong>{deletingBooking.customer?.name || 'Customer'}</strong> scheduled on <strong>{deletingBooking.bookingDate}</strong>. Any associated reviews or notifications will also be cleared. This action cannot be undone.
+            </div>
+
+            {bookingDeleteError && (
+              <div className="alert-box alert-danger" style={{ marginBottom: '1rem' }}>
+                <AlertCircle size={14} />
+                <span>{bookingDeleteError}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Reason for Permanent Deletion <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={bookingDeleteReason}
+                onChange={(e) => setBookingDeleteReason(e.target.value)}
+                placeholder="e.g. Dangerous content, fraudulent booking request, scam attempt"
+                className="form-control"
+                style={{ width: '100%', fontSize: '0.85rem' }}
+                required
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" disabled={bookingDeleteSubmitting} onClick={() => setDeletingBooking(null)}>
+                Cancel
+              </Button>
+              <button
+                type="button"
+                disabled={bookingDeleteSubmitting || !bookingDeleteReason.trim()}
+                onClick={handleConfirmDeleteBooking}
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: '#dc2626',
+                  borderColor: '#dc2626',
+                  cursor: (!bookingDeleteReason.trim() || bookingDeleteSubmitting) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {bookingDeleteSubmitting ? 'Deleting...' : 'Confirm Permanent Deletion'}
               </button>
             </div>
           </div>
