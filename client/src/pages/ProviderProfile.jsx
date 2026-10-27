@@ -1181,7 +1181,7 @@ export default function ProviderProfile() {
             )}
 
             {/* Upload Form Box */}
-            <form onSubmit={handleFileUpload} style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '1.5rem' }}>
+            <form onSubmit={handleFileUpload} style={{ backgroundColor: 'var(--color-bg-subtle)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '1.5rem' }}>
               <h4 style={{ fontSize: '0.95rem', margin: '0 0 1rem', color: 'var(--color-text-title)' }}>
                 Upload New Document
               </h4>
@@ -1255,7 +1255,7 @@ export default function ProviderProfile() {
                 <p style={{ fontSize: '0.85rem', margin: 0 }}>Loading verification documents...</p>
               </div>
             ) : documents.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)' }}>
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)' }}>
                 <FileText size={28} style={{ color: '#94a3b8', margin: '0 auto 0.5rem' }} />
                 <p style={{ margin: '0 0 0.25rem', fontWeight: 600, color: 'var(--color-text-title)', fontSize: '0.9rem' }}>
                   No verification documents uploaded yet

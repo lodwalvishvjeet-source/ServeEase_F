@@ -584,11 +584,11 @@ export default function ProviderDashboard() {
           <div style={{
             textAlign: 'center',
             padding: '2.5rem 1rem',
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--color-bg-subtle)',
             borderRadius: 'var(--radius-md)',
-            border: '1px dashed #cbd5e1'
+            border: '1px dashed var(--color-border)'
           }}>
-            <Star size={36} style={{ color: '#cbd5e1', margin: '0 auto 0.75rem', strokeWidth: 1.5 }} />
+            <Star size={36} style={{ color: 'var(--color-text-subtle)', margin: '0 auto 0.75rem', strokeWidth: 1.5 }} />
             <h4 style={{ margin: '0 0 0.35rem', color: 'var(--color-text-title)', fontSize: '1.05rem' }}>
               No Customer Reviews Yet
             </h4>

@@ -118,7 +118,7 @@ export default function ProviderDetail() {
           title="Provider Profile Not Found"
           message={error || "We could not find a provider with this identification code. They may have been unlisted or the URL is incorrect."}
           actionText="Back to All Services"
-          onAction={() => window.location.href = '/services'}
+          onAction={() => navigate('/services')}
         />
       </div>
     );

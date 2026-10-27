@@ -964,7 +964,7 @@ export default function AdminDashboard() {
                   const trends = stats.bookingTrends || [];
                   if (trends.length === 0) {
                     return (
-                      <div style={{ textAlign: 'center', padding: '3rem 1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px dashed #cbd5e1' }}>
+                      <div style={{ textAlign: 'center', padding: '3rem 1rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)' }}>
                         <Calendar size={36} style={{ color: '#94a3b8', margin: '0 auto 0.5rem' }} />
                         <h4 style={{ margin: '0 0 0.25rem', color: 'var(--color-text-title)', fontSize: '1rem' }}>
                           No Bookings Recorded In This Window
@@ -1203,9 +1203,9 @@ export default function AdminDashboard() {
                         height: '14px',
                         borderRadius: 'var(--radius-full)',
                         overflow: 'hidden',
-                        backgroundColor: '#f1f5f9',
+                        backgroundColor: 'var(--color-bg-subtle)',
                         marginBottom: '1.5rem',
-                        border: '1px solid #e2e8f0'
+                        border: '1px solid var(--color-border)'
                       }}>
                         {bStatus.completed > 0 && (
                           <div
@@ -1790,7 +1790,7 @@ export default function AdminDashboard() {
                       padding: '1.25rem',
                       borderRadius: 'var(--radius-md)',
                       border: '1px solid var(--color-border)',
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--color-bg-subtle)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
@@ -2173,8 +2173,8 @@ export default function AdminDashboard() {
                     style={{
                       padding: '1.25rem',
                       borderRadius: 'var(--radius-md)',
-                      border: `1px solid ${pendingReports.length > 0 ? '#fca5a5' : isHidden ? '#cbd5e1' : 'var(--color-border)'}`,
-                      backgroundColor: isHidden ? '#f8fafc' : pendingReports.length > 0 ? '#fff5f5' : '#ffffff'
+                      border: `1px solid ${pendingReports.length > 0 ? 'var(--color-danger)' : 'var(--color-border)'}`,
+                      backgroundColor: isHidden ? 'var(--color-bg-subtle)' : pendingReports.length > 0 ? 'var(--color-danger-bg)' : 'var(--color-bg-card)'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
@@ -2249,7 +2249,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {r.comment && (
-                      <p style={{ margin: '0.5rem 0', fontSize: '0.9rem', color: 'var(--color-text-body)', fontStyle: 'italic', backgroundColor: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
+                      <p style={{ margin: '0.5rem 0', fontSize: '0.9rem', color: 'var(--color-text-body)', fontStyle: 'italic', backgroundColor: 'var(--color-bg-subtle)', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
                         "{r.comment}"
                       </p>
                     )}
@@ -2423,7 +2423,7 @@ export default function AdminDashboard() {
             <div style={{
               padding: '1.5rem 1.75rem',
               borderBottom: '1px solid var(--color-border)',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              background: 'linear-gradient(135deg, var(--color-bg-card) 0%, var(--color-bg-subtle) 100%)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'flex-start',
@@ -2521,7 +2521,7 @@ export default function AdminDashboard() {
             <div style={{
               display: 'flex',
               borderBottom: '1px solid var(--color-border)',
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--color-bg-subtle)',
               padding: '0 1.5rem',
               overflowX: 'auto',
               gap: '0.5rem'
@@ -2659,7 +2659,7 @@ export default function AdminDashboard() {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                     gap: '1rem'
                   }}>
-                    <div style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: '#f8fafc', border: '1px solid var(--color-border)' }}>
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
                       <span style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
                         Total Bookings
                       </span>
@@ -2881,7 +2881,7 @@ export default function AdminDashboard() {
 
                       {/* Verification Audit Details if recorded */}
                       {(profileModalUser.providerDetails?.verifiedAt || profileModalUser.providerDetails?.verificationNotes || profileModalUser.providerDetails?.rejectionReason) && (
-                        <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                        <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '0.82rem' }}>
                           <span style={{ fontWeight: 700, color: 'var(--color-text-title)', display: 'block', marginBottom: '0.25rem' }}>
                             Administrative Verification Record:
                           </span>
@@ -2985,7 +2985,7 @@ export default function AdminDashboard() {
                       {profileModalUser.recentReviews.map((rev) => {
                         const otherParty = profileModalUser.role === 'customer' ? rev.provider : rev.customer;
                         return (
-                          <div key={rev._id} style={{ padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: '#f8fafc' }}>
+                          <div key={rev._id} style={{ padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 {[...Array(5)].map((_, i) => (
@@ -3037,7 +3037,7 @@ export default function AdminDashboard() {
                           other: 'Other Credential'
                         };
                         return (
-                          <div key={doc._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div key={doc._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', flexWrap: 'wrap', gap: '0.75rem' }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <strong style={{ color: 'var(--color-text-title)', fontSize: '0.9rem' }}>
@@ -3123,7 +3123,7 @@ export default function AdminDashboard() {
             <div style={{
               padding: '1rem 1.75rem',
               borderTop: '1px solid var(--color-border)',
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--color-bg-subtle)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -3330,7 +3330,7 @@ export default function AdminDashboard() {
             </p>
 
             {/* Document Review Subsection */}
-            <div style={{ marginBottom: '1.25rem', backgroundColor: '#f8fafc', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+            <div style={{ marginBottom: '1.25rem', backgroundColor: 'var(--color-bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
                 <strong style={{ fontSize: '0.88rem', color: 'var(--color-text-title)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <FileText size={15} style={{ color: 'var(--primary-600)' }} />
