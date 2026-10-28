@@ -7,7 +7,7 @@ import http from 'http';
 import mongoose from 'mongoose';
 import './src/config/env.js';
 import { validateServerEnv } from './src/config/validateEnv.js';
-import app, { allowedOrigins } from './src/app.js';
+import app, { allowedOrigins, isOriginAllowed } from './src/app.js';
 import { connectDB } from './src/config/db.js';
 import { initSocket } from './src/socket/index.js';
 
@@ -45,7 +45,9 @@ const startServer = async () => {
 
   // Create HTTP server and initialize Socket.IO with CORS
   const httpServer = http.createServer(app);
-  const io = initSocket(httpServer, allowedOrigins);
+  const io = initSocket(httpServer, allowedOrigins, (origin, callback) => {
+    callback(null, isOriginAllowed(origin));
+  });
 
   // Start listening on configured port
   const server = httpServer.listen(PORT, () => {

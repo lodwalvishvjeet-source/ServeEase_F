@@ -12,10 +12,10 @@ let ioInstance = null;
 /**
  * Initialize Socket.IO Server with JWT authentication and strict room security
  */
-export const initSocket = (httpServer, allowedOrigins = []) => {
+export const initSocket = (httpServer, allowedOrigins = [], originChecker = null) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: originChecker || allowedOrigins,
       credentials: true,
       methods: ['GET', 'POST']
     }

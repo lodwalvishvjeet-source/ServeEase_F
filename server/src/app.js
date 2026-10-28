@@ -33,15 +33,21 @@ const defaultDevOrigins = [
   'http://127.0.0.1:5173'
 ];
 
-const allowedOrigins = Array.from(new Set([...envOrigins, ...defaultDevOrigins]));
+export const allowedOrigins = Array.from(new Set([...envOrigins, ...defaultDevOrigins]));
+
+export const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  const normalized = origin.replace(/\/$/, '');
+  if (allowedOrigins.indexOf(normalized) !== -1) return true;
+  if (/\.vercel\.app$/.test(normalized)) return true;
+  if (/\.onrender\.com$/.test(normalized)) return true;
+  return false;
+};
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow non-browser requests or same-origin requests with no origin header (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-
-    const normalized = origin.replace(/\/$/, '');
-    if (allowedOrigins.indexOf(normalized) !== -1) {
+    if (!origin || isOriginAllowed(origin)) {
       return callback(null, true);
     }
     return callback(new Error(`CORS policy: This origin is not allowed by Access-Control-Allow-Origin: ${origin}`));
@@ -127,5 +133,4 @@ app.use('/api/*', (req, res) => {
 // Centralized Error Handling Middleware
 app.use(errorHandler);
 
-export { allowedOrigins };
 export default app;

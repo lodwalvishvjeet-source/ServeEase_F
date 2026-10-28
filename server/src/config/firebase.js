@@ -22,10 +22,24 @@ try {
     privateKey = privateKey.replace(/\\n/g, '\n');
   }
 
-  // Option B: Service Account JSON File Path
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  // Option B: Raw Service Account JSON in Environment Variable
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  if (projectId && clientEmail && privateKey) {
+  // Option C: Service Account JSON File Path (supports Render /etc/secrets/ default)
+  const defaultRenderSecretPath = '/etc/secrets/serviceAccountKey.json';
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || (fs.existsSync(defaultRenderSecretPath) ? defaultRenderSecretPath : null);
+
+  if (serviceAccountJson) {
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    firebaseApp = getApps().length === 0
+      ? initializeApp({
+          credential: cert(serviceAccount)
+        })
+      : getApps()[0];
+    firebaseAuth = getAuth(firebaseApp);
+    isFirebaseConfigured = true;
+    console.log('🔥 [Firebase Admin] Initialized successfully using FIREBASE_SERVICE_ACCOUNT_JSON environment variable.');
+  } else if (projectId && clientEmail && privateKey) {
     firebaseApp = getApps().length === 0
       ? initializeApp({
           credential: cert({
