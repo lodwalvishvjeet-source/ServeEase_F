@@ -41,8 +41,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
-      index: true,
-      default: null
+      index: true
     },
     role: {
       type: String,
