@@ -21,10 +21,15 @@ const resolveApiBaseUrl = () => {
   if (
     typeof window !== 'undefined' &&
     window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1' &&
-    (trimmed.includes('localhost') || trimmed.includes('127.0.0.1'))
+    window.location.hostname !== '127.0.0.1'
   ) {
-    return '';
+    if (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')) {
+      return '';
+    }
+    // Production cloud deployment fallback: automatically connects to Render backend if env var was omitted
+    if (!trimmed) {
+      return 'https://api-serveease.onrender.com';
+    }
   }
   return trimmed;
 };
