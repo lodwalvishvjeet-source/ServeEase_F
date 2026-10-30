@@ -26,6 +26,9 @@ export const connectDB = async () => {
   try {
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000, // Timeout fast if Atlas cluster is unreachable
+      maxPoolSize: 10,                // Conservative pool limit to prevent thread exhaustion
+      minPoolSize: 1,                 // Maintain warm connection to eliminate cold-start TLS penalties
+      maxIdleTimeMS: 30000            // Close idle sockets after 30 seconds
     });
 
     console.log(`✅ [MongoDB] Connected successfully to host: ${conn.connection.host}`);

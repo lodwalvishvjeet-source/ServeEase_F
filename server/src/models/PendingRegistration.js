@@ -20,8 +20,7 @@ const pendingRegistrationSchema = new mongoose.Schema(
       required: [true, 'Email address is required'],
       unique: true,
       trim: true,
-      lowercase: true,
-      index: true
+      lowercase: true
     },
     passwordHash: {
       type: String,

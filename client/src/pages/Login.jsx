@@ -52,6 +52,7 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (isGoogleLoading || isLoading) return;
     setFormError('');
     try {
       setIsGoogleLoading(true);
@@ -66,6 +67,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading || isGoogleLoading) return;
     setFormError('');
 
     if (!email.trim() || !password.trim()) {
@@ -109,6 +111,7 @@ export default function Login() {
             aria-selected={role === 'customer'}
             className={`auth-tab-btn ${role === 'customer' ? 'active' : ''}`}
             onClick={() => handleTabChange('customer')}
+            disabled={isLoading || isGoogleLoading}
           >
             Customer
           </button>
@@ -118,6 +121,7 @@ export default function Login() {
             aria-selected={role === 'provider'}
             className={`auth-tab-btn ${role === 'provider' ? 'active' : ''}`}
             onClick={() => handleTabChange('provider')}
+            disabled={isLoading || isGoogleLoading}
           >
             Provider
           </button>
@@ -127,6 +131,7 @@ export default function Login() {
             aria-selected={role === 'admin'}
             className={`auth-tab-btn ${role === 'admin' ? 'active' : ''}`}
             onClick={() => handleTabChange('admin')}
+            disabled={isLoading || isGoogleLoading}
           >
             Admin
           </button>
@@ -218,7 +223,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isGoogleLoading}
               />
             </div>
           </div>
@@ -238,7 +243,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               required
               autoComplete="current-password"
             />
@@ -253,6 +258,7 @@ export default function Login() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 style={{ accentColor: 'var(--primary-600)', width: '1rem', height: '1rem', cursor: 'pointer' }}
+                disabled={isLoading || isGoogleLoading}
               />
               Remember me
             </label>
@@ -261,7 +267,7 @@ export default function Login() {
             </Link>
           </div>
 
-          <Button type="submit" variant="primary" size="lg" block disabled={isLoading} loading={isLoading}>
+          <Button type="submit" variant="primary" size="lg" block disabled={isLoading || isGoogleLoading} loading={isLoading}>
             <LogIn size={18} />
             Sign In as {role === 'admin' ? 'Administrator' : role === 'provider' ? 'Provider' : 'Customer'}
           </Button>

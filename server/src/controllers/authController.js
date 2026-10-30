@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import PendingRegistration from '../models/PendingRegistration.js';
@@ -7,6 +8,13 @@ import { validateEmail, validateIndianMobile } from '../utils/validation.js';
 import { getJwtSecret, getJwtRefreshSecret } from '../config/env.js';
 import { sendEmail, isEmailConfigured } from '../utils/email.js';
 import { verifyFirebaseIdToken, isFirebaseConfigured } from '../config/firebase.js';
+
+/**
+ * Precomputed dummy bcrypt hash (cost factor 12) for constant-time comparisons.
+ * Ensures authentication attempts for non-existent users take the same time as invalid passwords,
+ * neutralizing user enumeration timing side-channels without impacting valid logins.
+ */
+const DUMMY_PASSWORD_HASH = '$2b$12$2tCgE/b9kF6h.h/nwFYOdOq1DiZVcWDCCuAKTnF3zp/iE29C4lWTe';
 
 /**
  * Helper to parse JWT expiration string into milliseconds for Cookie maxAge
@@ -189,8 +197,8 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // 7. Duplicate account check
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    // 7. Duplicate account check (index-backed existence check)
+    const existingUser = await User.exists({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -331,13 +339,23 @@ export const login = async (req, res, next) => {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    // 1. Email format validation before database queries
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: emailCheck.error
+      });
+    }
+
+    const normalizedEmail = emailCheck.normalized;
 
     // Query user and explicitly select passwordHash
     const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
 
-    // Generic error on missing user or mismatched credentials to prevent enumeration
+    // Generic error on missing user; execute dummy bcrypt comparison to prevent timing enumeration
     if (!user) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return res.status(401).json({
         success: false,
         error: 'Invalid email address or password.'
@@ -528,7 +546,7 @@ export const forgotPassword = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: normalizedEmail }).select('+resetPasswordOtp +resetPasswordOtpExpires name email');
     if (!user) {
       // Uniform generic response prevents user/email enumeration attacks
       return res.status(200).json({
@@ -797,7 +815,7 @@ export const verifyEmailOtp = async (req, res, next) => {
     }
 
     // Guard against race conditions / concurrent verification requests
-    const duplicate = await User.findOne({ email: normalizedEmail });
+    const duplicate = await User.exists({ email: normalizedEmail });
     if (duplicate) {
       await PendingRegistration.deleteOne({ _id: pending._id });
       return res.status(409).json({
@@ -872,7 +890,7 @@ export const resendEmailVerificationOtp = async (req, res, next) => {
     }
 
     // Check if account is already registered and verified
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const existingUser = await User.findOne({ email: normalizedEmail }).select('emailVerified').lean();
     if (existingUser && existingUser.emailVerified) {
       return res.status(400).json({
         success: false,

@@ -10,10 +10,10 @@
  * Credentials (HttpOnly cookies) are consistently sent with credentials: 'include'.
  */
 
-import { getFirebaseIdToken } from './firebaseAuth';
+import { getFirebaseIdToken } from './firebaseAuth.js';
 
 // Strip trailing slashes if configured
-const rawBase = import.meta.env.VITE_API_URL || '';
+const rawBase = ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || (typeof process !== 'undefined' ? process.env.VITE_API_URL : '') || '');
 const resolveApiBaseUrl = () => {
   const trimmed = rawBase.replace(/\/+$/, '');
   // If running in a browser on a secondary device/LAN IP, but rawBase was hardcoded to localhost,
@@ -37,16 +37,24 @@ const resolveApiBaseUrl = () => {
 export const API_BASE_URL = resolveApiBaseUrl();
 
 /**
+ * Default request timeout in milliseconds (15 seconds)
+ */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
+
+/**
  * Singleton Refresh Token Promise to handle concurrent 401s smoothly
  */
 let refreshPromise = null;
 
 async function executeTokenRefresh() {
   if (!refreshPromise) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
     refreshPromise = fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
     })
       .then(async (res) => {
         const json = await res.json().catch(() => ({}));
@@ -56,6 +64,7 @@ async function executeTokenRefresh() {
         return json;
       })
       .finally(() => {
+        clearTimeout(timer);
         refreshPromise = null;
       });
   }
@@ -86,10 +95,32 @@ async function request(endpoint, options = {}) {
     }
   }
 
+  // Configurable request timeout with 15-second default
+  const timeoutMs = options.timeout ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const controller = new AbortController();
+  let timerId = null;
+
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort(options.signal.reason);
+    } else {
+      options.signal.addEventListener('abort', () => controller.abort(options.signal.reason), { once: true });
+    }
+  }
+
+  if (timeoutMs > 0 && typeof setTimeout !== 'undefined') {
+    timerId = setTimeout(() => {
+      controller.abort(new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`));
+    }, timeoutMs);
+  }
+
+  const { timeout: _unusedTimeout, signal: _unusedSignal, ...restOptions } = options;
+
   const config = {
     credentials: 'include',
-    ...options,
-    headers
+    ...restOptions,
+    headers,
+    signal: controller.signal
   };
 
   // Do not set Content-Type if there's no body or if body is FormData (let browser set multipart boundary)
@@ -101,11 +132,18 @@ async function request(endpoint, options = {}) {
   try {
     res = await fetch(url, config);
   } catch (networkErr) {
-    console.error(`[API Network Error] Failed connecting to ${url}:`, networkErr.message);
-    const err = new Error('ServeEase server is currently unreachable. Please check your network connection or verify the backend service is running.');
-    err.status = 503;
+    const isTimeout = controller.signal.aborted || networkErr.name === 'AbortError' || networkErr.message?.includes('timed out');
+    const errorMsg = isTimeout
+      ? `Server request timed out after ${Math.round(timeoutMs / 1000)} seconds. Please verify your connection or backend server.`
+      : 'ServeEase server is currently unreachable. Please check your network connection or verify the backend service is running.';
+    console.error(`[API ${isTimeout ? 'Timeout' : 'Network Error'}] Failed connecting to ${url}:`, networkErr.message);
+    const err = new Error(errorMsg);
+    err.status = isTimeout ? 504 : 503;
     err.isNetworkError = true;
+    err.isTimeout = isTimeout;
     throw err;
+  } finally {
+    if (timerId) clearTimeout(timerId);
   }
 
   let data;
@@ -206,11 +244,23 @@ export async function fetchDocumentBlob(endpoint) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    method: 'GET',
-    credentials: 'include',
-    headers
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers,
+      signal: controller.signal
+    });
+  } catch (networkErr) {
+    const isTimeout = controller.signal.aborted || networkErr.name === 'AbortError';
+    throw new Error(isTimeout ? 'Document request timed out. Please try again.' : 'Unable to reach document server.');
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     let errorMsg = `Failed to retrieve document (${res.status})`;

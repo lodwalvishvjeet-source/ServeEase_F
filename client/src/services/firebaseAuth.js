@@ -6,7 +6,7 @@ import {
   sendPasswordResetEmail,
   sendEmailVerification
 } from 'firebase/auth';
-import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase';
+import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase.js';
 
 /**
  * Standardized Firebase Authentication Service
@@ -15,15 +15,55 @@ import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase';
 export const isFirebaseReady = () => isFirebaseConfigured && auth !== null;
 
 /**
+ * Maps Firebase Auth error codes to clear, actionable user messages
+ */
+export const formatFirebaseAuthError = (err) => {
+  if (!err) return 'Authentication failed. Please try again.';
+  const code = err.code || err.message;
+  switch (code) {
+    case 'auth/popup-blocked':
+      return 'The Google sign-in popup was blocked by your browser. Please allow popups for this site and try again.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in cancelled: The Google popup window was closed before completing authentication.';
+    case 'auth/cancelled-popup-request':
+      return 'Another sign-in popup is already open. Please complete or close the existing popup.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized in Firebase Console. Please add this host (e.g. localhost or your deployment URL) to Firebase Authentication -> Settings -> Authorized Domains.';
+    case 'auth/network-request-failed':
+      return 'Network connection failed while connecting to Google. Please check your internet connection.';
+    case 'auth/operation-not-allowed':
+      return 'Google Sign-In is not enabled in Firebase Console. Please enable the Google sign-in provider in Authentication -> Sign-in method.';
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with the same email address using different sign-in credentials.';
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Invalid credentials. Please verify your email and password.';
+    case 'auth/too-many-requests':
+      return 'Access to this account has been temporarily disabled due to many failed login attempts. Please try again later.';
+    default:
+      return err.message || 'Authentication failed. Please try again.';
+  }
+};
+
+/**
  * Sign in with Email and Password via Firebase
  */
 export const firebaseSignInWithEmail = async (email, password) => {
   if (!isFirebaseReady()) {
     throw new Error('Firebase Authentication is not configured in client/.env.');
   }
-  const credential = await signInWithEmailAndPassword(auth, email, password);
-  const idToken = await credential.user.getIdToken();
-  return { user: credential.user, idToken };
+  try {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const idToken = await credential.user.getIdToken();
+    return { user: credential.user, idToken };
+  } catch (err) {
+    const formatted = formatFirebaseAuthError(err);
+    const customErr = new Error(formatted);
+    customErr.code = err.code;
+    customErr.originalError = err;
+    throw customErr;
+  }
 };
 
 /**
@@ -33,17 +73,25 @@ export const firebaseRegisterWithEmail = async (email, password) => {
   if (!isFirebaseReady()) {
     throw new Error('Firebase Authentication is not configured in client/.env.');
   }
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  
-  // Optionally trigger email verification in background
   try {
-    await sendEmailVerification(credential.user);
-  } catch (verifyErr) {
-    console.warn('Could not dispatch Firebase email verification:', verifyErr.message);
-  }
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Optionally trigger email verification in background
+    try {
+      await sendEmailVerification(credential.user);
+    } catch (verifyErr) {
+      console.warn('Could not dispatch Firebase email verification:', verifyErr.message);
+    }
 
-  const idToken = await credential.user.getIdToken();
-  return { user: credential.user, idToken };
+    const idToken = await credential.user.getIdToken();
+    return { user: credential.user, idToken };
+  } catch (err) {
+    const formatted = formatFirebaseAuthError(err);
+    const customErr = new Error(formatted);
+    customErr.code = err.code;
+    customErr.originalError = err;
+    throw customErr;
+  }
 };
 
 /**
@@ -53,9 +101,17 @@ export const firebaseSignInWithGoogle = async () => {
   if (!isFirebaseReady()) {
     throw new Error('Firebase Authentication is not configured in client/.env.');
   }
-  const credential = await signInWithPopup(auth, googleProvider);
-  const idToken = await credential.user.getIdToken();
-  return { user: credential.user, idToken };
+  try {
+    const credential = await signInWithPopup(auth, googleProvider);
+    const idToken = await credential.user.getIdToken();
+    return { user: credential.user, idToken };
+  } catch (err) {
+    const formatted = formatFirebaseAuthError(err);
+    const customErr = new Error(formatted);
+    customErr.code = err.code;
+    customErr.originalError = err;
+    throw customErr;
+  }
 };
 
 /**

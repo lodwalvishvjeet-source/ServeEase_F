@@ -73,6 +73,7 @@ export default function Register() {
   }, [activeCityMeta]);
 
   const handleGoogleSignUp = async () => {
+    if (isGoogleLoading || isLoading) return;
     setErrorMessage('');
     if (role === 'provider' && !selectedCity) {
       setErrorMessage('Please select your operating city before signing up with Google.');
@@ -108,6 +109,7 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading || isGoogleLoading) return;
     setErrorMessage('');
 
     // Frontend validation
@@ -577,7 +579,7 @@ export default function Register() {
             </label>
           </div>
 
-          <Button type="submit" variant="primary" size="lg" block disabled={isLoading} loading={isLoading}>
+          <Button type="submit" variant="primary" size="lg" block disabled={isLoading || isGoogleLoading} loading={isLoading}>
             <UserPlus size={18} />
             Create {role === 'customer' ? 'Customer' : 'Provider'} Account
           </Button>
